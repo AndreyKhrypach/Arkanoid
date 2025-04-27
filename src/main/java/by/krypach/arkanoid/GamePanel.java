@@ -7,7 +7,6 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class GamePanel extends JPanel implements KeyListener {
-    private static final int POINTS_PER_BRICK = 5;
     private static final int EXTRA_LIFE_SCORE = 100;
 
     private int lives = 3;
@@ -70,7 +69,6 @@ public class GamePanel extends JPanel implements KeyListener {
         // Проверка победы (все кирпичи уничтожены)
         if (bricks.isEmpty()) {
             isRunning = false;
-            System.out.println("Победа!"); // Можно заменить на вывод в интерфейс
         }
         repaint();
     }
@@ -165,7 +163,7 @@ public class GamePanel extends JPanel implements KeyListener {
 
         for (int row = 0; row < 5; row++) {
             for (int col = 0; col < 10; col++) {
-                bricks.add(new Brick(col * 80 + 10, row * 30 + 50, 70, 20));
+                bricks.add(new Brick(col * 80 + 10, row * 30 + 50, 70, 20, 5 - row));
             }
         }
     }
@@ -219,18 +217,19 @@ public class GamePanel extends JPanel implements KeyListener {
         bricks.removeIf(brick -> {
             if (ball.getBounds().intersects(brick.getBounds())) {
                 ball.reverseY();
-                addScore(POINTS_PER_BRICK);
+                addScore(brick.getRow());
                 return true;
             }
             return false;
         });
     }
 
-    private void addScore(int points) {
-        int oldScore = score;
-        score += points;
+    private void addScore(int row) {
+        // 1-5 очков в зависимости от ряда
+        score += row;
 
-        // Проверяем, перешли ли через границу в 100 очков
+        // Проверка на дополнительную жизнь (каждые 100 очков)
+        int oldScore = score - row;
         if (oldScore / EXTRA_LIFE_SCORE < score / EXTRA_LIFE_SCORE) {
             lives++;
             // Анимация получения жизни
@@ -242,6 +241,8 @@ public class GamePanel extends JPanel implements KeyListener {
                 setBackground(Color.BLACK);
             }).start();
         }
+
+        //System.out.printf("Уничтожен кирпич ряда %d! +%d очков%n", row, row);
     }
 
     private void loseLife() {
