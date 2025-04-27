@@ -3,7 +3,7 @@ import java.awt.*;
 
 public class Ball {
     private int x, y;
-    private float speedX, speedY;
+    private double speedX, speedY;
     private final int size = 20;
     private boolean isStuckToPaddle = true; // Начинаем с прилипшего мяча
 
@@ -14,7 +14,7 @@ public class Ball {
         this.speedY = speedY;
     }
 
-    public void move(float deltaTime) {
+    public void move(double deltaTime) {
         if (!isStuckToPaddle) {
             x += speedX * deltaTime;
             y += speedY * deltaTime;
@@ -40,19 +40,19 @@ public class Ball {
         this.x = x;
     }
 
-    public float getSpeedX() {
+    public double getSpeedX() {
         return speedX;
     }
 
-    public void setSpeedX(float speedX) {
+    public void setSpeedX(double speedX) {
         this.speedX = speedX;
     }
 
-    public float getSpeedY() {
+    public double getSpeedY() {
         return speedY;
     }
 
-    public void setSpeedY(float speedY) {
+    public void setSpeedY(double speedY) {
         this.speedY = speedY;
     }
 
@@ -72,7 +72,7 @@ public class Ball {
         isStuckToPaddle = stuckToPaddle;
     }
 
-    public void setSpeed(float speedX, float speedY) {
+    public void setSpeed(double speedX, double speedY) {
         this.speedX = speedX;
         this.speedY = speedY;
     }
