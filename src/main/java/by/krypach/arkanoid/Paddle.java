@@ -3,6 +3,7 @@ package by.krypach.arkanoid;
 import java.awt.*;
 
 public class Paddle {
+    private double preciseX;  // Точная позиция (double)
     private int x, y;
     private final int width, height;
     private int maxXPosition;
@@ -12,6 +13,7 @@ public class Paddle {
     private final float maxSpeed = 12f;
 
     public Paddle(int x, int y, int width, int height) {
+        this.preciseX = x;
         this.maxXPosition = 800 - width - 2;
         this.x = x;
         this.y = y;
@@ -19,7 +21,7 @@ public class Paddle {
         this.height = height;
     }
 
-    public void update() {
+    public void update(double deltaTime) {
         // Плавное замедление
         if (currentSpeed != 0) {
             currentSpeed = Math.abs(currentSpeed) > deceleration
@@ -27,8 +29,10 @@ public class Paddle {
                     : 0;
         }
 
-        x += currentSpeed;
-        x = Math.max(0, Math.min(x, maxXPosition));
+        // Движение с учётом deltaTime (speed теперь в пикселях/секунду)
+        preciseX += currentSpeed * deltaTime * 60; // Множитель 60 для сохранения скорости
+        preciseX = Math.max(0, Math.min(preciseX, maxXPosition));
+        x = (int) Math.round(preciseX);  // Округление для отрисовки и коллизий
     }
 
     // Движение платформы (влево/вправо)
