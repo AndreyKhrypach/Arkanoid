@@ -1,4 +1,4 @@
-package by.krypach.arkanoid;
+package by.krypach.arkanoid.models;
 
 import java.awt.*;
 
@@ -90,5 +90,17 @@ public class Brick {
 
     public int getMaxHits() {
         return maxHits;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getWidth() {
+        return width;
     }
 }
