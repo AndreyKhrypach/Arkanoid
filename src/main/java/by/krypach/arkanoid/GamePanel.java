@@ -30,13 +30,13 @@ public class GamePanel extends JPanel implements KeyListener {
 
         initGame();
 
-        long[] lastTime = {System.nanoTime()};
+//        long[] lastTime = {System.nanoTime()};
 
         Timer timer = new Timer(16, e -> {
             long currentTime = System.nanoTime();
-            float deltaTime = (currentTime - lastTime[0]) / 1_000_000f; // В миллисекундах
-            lastTime[0] = currentTime;
-            update(deltaTime / 1000f); // Переводим в секунды
+            double deltaTime =  (currentTime - lastTime) / 1_000_000_000.0; // В миллисекундах
+            lastTime = currentTime;
+            update(deltaTime); // Переводим в секунды
             repaint();
         });
         timer.start();
@@ -104,12 +104,6 @@ public class GamePanel extends JPanel implements KeyListener {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        long currentTime = System.nanoTime();
-        double deltaTime = (currentTime - lastTime) / 1_000_000_000.0;
-        lastTime = currentTime;
-
-        paddle.update(deltaTime);  // Передаём deltaTime
-        paddle.draw(g);
 
         // Отрисовка HUD
         g.setColor(Color.WHITE);

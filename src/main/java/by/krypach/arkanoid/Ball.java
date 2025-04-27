@@ -7,17 +7,17 @@ public class Ball {
     private final int size = 20;
     private boolean isStuckToPaddle = true; // Начинаем с прилипшего мяча
 
-    public Ball(int x, int y, float speedX, float speedY) {
+    public Ball(int x, int y, double speedX, double speedY) {
         this.x = x;
         this.y = y;
-        this.speedX = speedX;
-        this.speedY = speedY;
+        this.speedX = speedX / 60.0;
+        this.speedY = speedY / 60.0;
     }
 
     public void move(double deltaTime) {
         if (!isStuckToPaddle) {
-            x += speedX * deltaTime;
-            y += speedY * deltaTime;
+            x += (int) (speedX * deltaTime);
+            y += (int) (speedY * deltaTime);
         }
     }
 
@@ -73,7 +73,7 @@ public class Ball {
     }
 
     public void setSpeed(double speedX, double speedY) {
-        this.speedX = speedX;
-        this.speedY = speedY;
+        this.speedX = speedX / 60.0;
+        this.speedY = speedY / 60.0;
     }
 }

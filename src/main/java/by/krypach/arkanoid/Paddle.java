@@ -30,14 +30,14 @@ public class Paddle {
         }
 
         // Движение с учётом deltaTime (speed теперь в пикселях/секунду)
-        preciseX += currentSpeed * deltaTime * 60;  // Множитель 60 для сохранения текущей "чувствительности"
+        preciseX += currentSpeed * deltaTime; // Множитель 60 для сохранения скорости
         preciseX = Math.max(0, Math.min(preciseX, maxXPosition));
         x = (int) Math.round(preciseX);  // Округление для отрисовки и коллизий
     }
 
     // Движение платформы (влево/вправо)
     public void move(float direction) { // direction: -1 (влево), 1 (вправо), 0 (стоп)
-        currentSpeed += direction * acceleration;
+        currentSpeed += direction * acceleration * 60;
         currentSpeed = Math.max(-maxSpeed, Math.min(currentSpeed, maxSpeed));
     }
 
