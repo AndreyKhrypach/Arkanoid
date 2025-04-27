@@ -5,6 +5,7 @@ import java.util.List;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Random;
 
 public class GamePanel extends JPanel implements KeyListener {
     private static final int EXTRA_LIFE_SCORE = 100;
@@ -29,11 +30,9 @@ public class GamePanel extends JPanel implements KeyListener {
 
         initGame();
 
-//        long[] lastTime = {System.nanoTime()};
-
         Timer timer = new Timer(16, e -> {
             long currentTime = System.nanoTime();
-            double deltaTime =  (currentTime - lastTime) / 1_000_000_000.0; // В миллисекундах
+            double deltaTime = (currentTime - lastTime) / 1_000_000_000.0; // В миллисекундах
             lastTime = currentTime;
             update(deltaTime); // Переводим в секунды
             repaint();
@@ -60,7 +59,7 @@ public class GamePanel extends JPanel implements KeyListener {
         if (ball.isStuckToPaddle()) {
             ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
             ball.setY(paddle.getY() - ball.getSize());
-        }else {
+        } else {
             ball.move(deltaTime);
         }
 
@@ -96,7 +95,8 @@ public class GamePanel extends JPanel implements KeyListener {
         }
     }
 
-    public void keyTyped(KeyEvent e) {}
+    public void keyTyped(KeyEvent e) {
+    }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -139,30 +139,40 @@ public class GamePanel extends JPanel implements KeyListener {
                 g.setFont(new Font("Arial", Font.BOLD, 40));
                 String gameOver = "GAME OVER";
                 int width = g.getFontMetrics().stringWidth(gameOver);
-                g.drawString(gameOver, getWidth()/2 - width/2, getHeight()/2);
+                g.drawString(gameOver, getWidth() / 2 - width / 2, getHeight() / 2);
 
                 g.setFont(new Font("Arial", Font.PLAIN, 20));
                 scoreText = "Ваш счёт: " + score;
                 width = g.getFontMetrics().stringWidth(scoreText);
-                g.drawString(scoreText, getWidth()/2 - width/2, getHeight()/2 + 40);
+                g.drawString(scoreText, getWidth() / 2 - width / 2, getHeight() / 2 + 40);
             }
         }
 
         g.setColor(Color.YELLOW);
         g.drawLine(0, 0, getWidth(), 0); // Верхняя граница
-        g.drawLine(0, getHeight()-1, getWidth(), getHeight()-1); // Нижняя
+        g.drawLine(0, getHeight() - 1, getWidth(), getHeight() - 1); // Нижняя
         g.drawLine(0, 0, 0, getHeight()); // Левая
-        g.drawLine(getWidth()-1, 0, getWidth()-1, getHeight()); // Правая
+        g.drawLine(getWidth() - 1, 0, getWidth() - 1, getHeight()); // Правая
     }
 
     private void initGame() {
-        ball = new Ball(400, 300, 0, 0); // Начальная скорость 0
+        ball = new Ball(400, 300, 0, 0);
         paddle = new Paddle(350, 550, 100, 20);
         bricks = new ArrayList<>();
+        Random random = new Random();
 
         for (int row = 0; row < 5; row++) {
             for (int col = 0; col < 10; col++) {
-                bricks.add(new Brick(col * 80 + 10, row * 30 + 50, 70, 20, 5 - row));
+                // Определяем живучесть в зависимости от ряда
+                int hitsRequired = determineHitsRequired(row, random);
+
+                bricks.add(new Brick(
+                        col * 80 + 10,
+                        row * 30 + 50,
+                        70, 20,
+                        5 - row, // номер ряда (от 1 до 5)
+                        hitsRequired
+                ));
             }
         }
     }
@@ -205,19 +215,53 @@ public class GamePanel extends JPanel implements KeyListener {
             float speed = minSpeed + Math.abs(paddleSpeed) * speedBoost;
 
             ball.setSpeed(
-                    (float)(speed * Math.sin(Math.toRadians(bounceAngle))),
-                    (float)(-speed * Math.cos(Math.toRadians(bounceAngle)))
+                    (float) (speed * Math.sin(Math.toRadians(bounceAngle))),
+                    (float) (-speed * Math.cos(Math.toRadians(bounceAngle)))
             );
 
             ball.setY(paddle.getY() - ball.getSize());
         }
 
-        // Проверка столкновений с кирпичами
+        // Улучшенная проверка столкновений с кирпичами
         bricks.removeIf(brick -> {
-            if (ball.getBounds().intersects(brick.getBounds())) {
-                ball.reverseY();
-                addScore(brick.getRow());
-                return true;
+            if (!brick.isDestroyed() && ball.getBounds().intersects(brick.getBounds())) {
+                // Определяем сторону столкновения
+                Rectangle ballRect = ball.getBounds();
+                Rectangle brickRect = brick.getBounds();
+
+                // Вычисляем пересечение
+                Rectangle intersection = ballRect.intersection(brickRect);
+
+                // Определяем направление отскока
+                if (intersection.width > intersection.height) {
+                    // Столкновение сверху или снизу
+                    if (ballRect.y < brickRect.y) {
+                        // Удар снизу кирпича
+                        ball.setY(brickRect.y - ball.getSize());
+                    } else {
+                        // Удар сверху кирпича
+                        ball.setY(brickRect.y + brickRect.height);
+                    }
+                    ball.reverseY();
+                } else {
+                    // Столкновение сбоку
+                    if (ballRect.x < brickRect.x) {
+                        // Удар справа от кирпича
+                        ball.setX(brickRect.x - ball.getSize());
+                    } else {
+                        // Удар слева от кирпича
+                        ball.setX(brickRect.x + brickRect.width);
+                    }
+                    ball.reverseX();
+                }
+
+                // Обрабатываем удар по кирпичу
+                boolean destroyed = brick.hit();
+                if (destroyed) {
+                    addScore(brick.getRow() * brick.getMaxHits());
+                    return true;
+                }
+                return false;
             }
             return false;
         });
@@ -235,13 +279,15 @@ public class GamePanel extends JPanel implements KeyListener {
             new Thread(() -> {
                 for (int i = 0; i < 5; i++) {
                     setBackground(i % 2 == 0 ? Color.GREEN : Color.BLACK);
-                    try { Thread.sleep(150); } catch (InterruptedException e) {}
+                    try {
+                        Thread.sleep(150);
+                    } catch (InterruptedException e) {
+                    }
                 }
                 setBackground(Color.BLACK);
             }).start();
         }
 
-        //System.out.printf("Уничтожен кирпич ряда %d! +%d очков%n", row, row);
     }
 
     private void loseLife() {
@@ -264,5 +310,57 @@ public class GamePanel extends JPanel implements KeyListener {
         ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
         ball.setY(paddle.getY() - ball.getSize());
         paddle.setX(getWidth() / 2 - paddle.getWidth() / 2); // Центрируем платформу
+    }
+
+    // Определяем сколько ударов нужно для кирпича
+    private int determineHitsRequired(int row, Random random) {
+        // Вероятности для каждого ряда (можно настроить)
+        switch (row) {
+            case 0: // Самый верхний ряд (ряд 1 в игре)
+                // 60% - 1 удар, 25% - 2 удара, 10% - 3 удара, 5% - 4 удара
+                double chance = random.nextDouble();
+                if (chance < 0.6) return 1;
+                if (chance < 0.85) return 2;
+                if (chance < 0.95) return 3;
+                return 4;
+
+            case 1: // Второй сверху ряд
+                // 40% - 1 удар, 30% - 2 удара, 20% - 3 удара, 10% - 4 удара
+                chance = random.nextDouble();
+                if (chance < 0.4) return 1;
+                if (chance < 0.7) return 2;
+                if (chance < 0.9) return 3;
+                return 4;
+
+            case 2: // Средний ряд
+                // 20% - 1 удар, 30% - 2 удара, 30% - 3 удара, 15% - 4 удара, 5% - 5 ударов
+                chance = random.nextDouble();
+                if (chance < 0.2) return 1;
+                if (chance < 0.5) return 2;
+                if (chance < 0.8) return 3;
+                if (chance < 0.95) return 4;
+                return 5;
+
+            case 3: // Четвертый ряд
+                // 10% - 1 удар, 20% - 2 удара, 30% - 3 удара, 25% - 4 удара, 15% - 5 ударов
+                chance = random.nextDouble();
+                if (chance < 0.1) return 1;
+                if (chance < 0.3) return 2;
+                if (chance < 0.6) return 3;
+                if (chance < 0.85) return 4;
+                return 5;
+
+            case 4: // Самый нижний ряд
+                // 5% - 1 удар, 10% - 2 удара, 20% - 3 удара, 30% - 4 удара, 35% - 5 ударов
+                chance = random.nextDouble();
+                if (chance < 0.05) return 1;
+                if (chance < 0.15) return 2;
+                if (chance < 0.35) return 3;
+                if (chance < 0.65) return 4;
+                return 5;
+
+            default:
+                return 1; // На всякий случай
+        }
     }
 }
