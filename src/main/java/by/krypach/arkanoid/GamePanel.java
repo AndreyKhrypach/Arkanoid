@@ -20,6 +20,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean isPaused = false; // Добавляем флаг паузы
     private boolean leftPressed = false;
     private boolean rightPressed = false;
+    private long lastTime = System.nanoTime();
 
     public GamePanel() {
         setPreferredSize(new Dimension(800, 600));
@@ -29,29 +30,76 @@ public class GamePanel extends JPanel implements KeyListener {
 
         initGame();
 
-        long[] lastTime = {System.nanoTime()};
+//        long[] lastTime = {System.nanoTime()};
 
         Timer timer = new Timer(16, e -> {
             long currentTime = System.nanoTime();
-            float deltaTime = (currentTime - lastTime[0]) / 1_000_000f; // В миллисекундах
-            lastTime[0] = currentTime;
-            update(deltaTime / 1000f); // Переводим в секунды
+            double deltaTime =  (currentTime - lastTime) / 1_000_000_000.0; // В миллисекундах
+            lastTime = currentTime;
+            update(deltaTime); // Переводим в секунды
             repaint();
         });
         timer.start();
     }
 
-    private void initGame() {
-        ball = new Ball(400, 300, 0, 0); // Начальная скорость 0
-        paddle = new Paddle(350, 550, 100, 20);
-        bricks = new ArrayList<>();
+    public void update(double deltaTime) {
+        if (!isRunning || isPaused) return;
 
-        for (int row = 0; row < 5; row++) {
-            for (int col = 0; col < 10; col++) {
-                bricks.add(new Brick(col * 80 + 10, row * 30 + 50, 70, 20));
+        // Проверка падения мяча
+        if (ball.getY() >= getHeight()) {
+            loseLife();
+            return; // Прерываем кадр, чтобы избежать двойной обработки
+        }
+
+        // Управление платформой
+        float direction = 0;
+        if (leftPressed) direction -= 1;
+        if (rightPressed) direction += 1;
+        paddle.move(direction);
+        paddle.update(deltaTime);
+
+        if (ball.isStuckToPaddle()) {
+            ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
+            ball.setY(paddle.getY() - ball.getSize());
+        }else {
+            ball.move(deltaTime);
+        }
+
+        checkCollisions();
+
+        // Проверка победы (все кирпичи уничтожены)
+        if (bricks.isEmpty()) {
+            isRunning = false;
+            System.out.println("Победа!"); // Можно заменить на вывод в интерфейс
+        }
+        repaint();
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_P -> isPaused = !isPaused;
+            case KeyEvent.VK_SPACE -> {
+                if (ball.isStuckToPaddle()) {
+                    ball.setStuckToPaddle(false);
+                    ball.setSpeed(0, -250); // Старт вертикально вверх
+                }
             }
+            case KeyEvent.VK_LEFT -> leftPressed = true;
+            case KeyEvent.VK_RIGHT -> rightPressed = true;
         }
     }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_LEFT -> leftPressed = false;
+            case KeyEvent.VK_RIGHT -> rightPressed = false;
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {}
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -110,53 +158,42 @@ public class GamePanel extends JPanel implements KeyListener {
         g.drawLine(getWidth()-1, 0, getWidth()-1, getHeight()); // Правая
     }
 
-    public void update(float deltaTime) {
-        if (!isRunning || isPaused) return;
+    private void initGame() {
+        ball = new Ball(400, 300, 0, 0); // Начальная скорость 0
+        paddle = new Paddle(350, 550, 100, 20);
+        bricks = new ArrayList<>();
 
-        // Проверка падения мяча
-        if (ball.getY() >= getHeight()) {
-            loseLife();
-            return; // Прерываем кадр, чтобы избежать двойной обработки
+        for (int row = 0; row < 5; row++) {
+            for (int col = 0; col < 10; col++) {
+                bricks.add(new Brick(col * 80 + 10, row * 30 + 50, 70, 20));
+            }
         }
-
-        // Управление платформой
-        float direction = 0;
-        if (leftPressed) direction -= 1;
-        if (rightPressed) direction += 1;
-        paddle.move(direction);
-        paddle.update();
-
-        if (ball.isStuckToPaddle()) {
-            ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
-            ball.setY(paddle.getY() - ball.getSize());
-        }else {
-            ball.move(deltaTime);
-        }
-
-        checkCollisions();
-
-        // Проверка победы (все кирпичи уничтожены)
-        if (bricks.isEmpty()) {
-            isRunning = false;
-            System.out.println("Победа!"); // Можно заменить на вывод в интерфейс
-        }
-        repaint();
     }
 
     private void checkCollisions() {
         // Отскок от стен
         if (ball.getX() <= 0 || ball.getX() >= getWidth() - ball.getSize()) {
             ball.reverseX();
+            // Корректировка позиции для предотвращения залипания
+            if (ball.getX() <= 0) ball.setX(1);
+            if (ball.getX() >= getWidth() - ball.getSize())
+                ball.setX(getWidth() - ball.getSize() - 1);
         }
+        // Улучшенная обработка верхней границы
         if (ball.getY() <= 0) {
             ball.reverseY();
+            ball.setY(1); // Принудительно устанавливаем позицию ниже потолка
+            // Добавляем небольшую горизонтальную составляющую, если мяч двигался строго вертикально
+            if (Math.abs(ball.getSpeedX()) < 10) {
+                ball.setSpeedX(ball.getSpeedX() + (Math.random() > 0.5 ? 15 : -15));
+            }
         }
 
         //Отскок от платформы
         if (ball.getBounds().intersects(paddle.getBounds()) && !ball.isStuckToPaddle()) {
-            float ballCenterX = ball.getX() + ball.getSize() / 2f;
+            double ballCenterX = ball.getX() + ball.getSize() / 2f;
             float paddleCenterX = paddle.getX() + paddle.getWidth() / 2f;
-            float relativeIntersect = (ballCenterX - paddleCenterX) / (paddle.getWidth() / 2f);
+            double relativeIntersect = (ballCenterX - paddleCenterX) / (paddle.getWidth() / 2f);
 
             // Параметры для настройки:
             float maxBounceAngle = 60f; // Максимальный угол (градусы)
@@ -164,7 +201,7 @@ public class GamePanel extends JPanel implements KeyListener {
             float speedBoost = 1.2f;    // Усиление от скорости платформы
 
             // Рассчитываем угол
-            float bounceAngle = relativeIntersect * maxBounceAngle;
+            double bounceAngle = relativeIntersect * maxBounceAngle;
 
             // Учитываем скорость платформы
             float paddleSpeed = paddle.getCurrentSpeed();
@@ -188,32 +225,6 @@ public class GamePanel extends JPanel implements KeyListener {
             return false;
         });
     }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_P -> isPaused = !isPaused;
-            case KeyEvent.VK_SPACE -> {
-                if (ball.isStuckToPaddle()) {
-                    ball.setStuckToPaddle(false);
-                    ball.setSpeed(0, -200); // Старт вертикально вверх
-                }
-            }
-            case KeyEvent.VK_LEFT -> leftPressed = true;
-            case KeyEvent.VK_RIGHT -> rightPressed = true;
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_LEFT -> leftPressed = false;
-            case KeyEvent.VK_RIGHT -> rightPressed = false;
-        }
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {}
 
     private void addScore(int points) {
         int oldScore = score;
