@@ -1,4 +1,4 @@
-package by.krypach.arkanoid;
+package by.krypach.arkanoid.models;
 import java.awt.*;
 
 public class Ball {
