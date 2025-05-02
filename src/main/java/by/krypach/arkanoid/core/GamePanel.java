@@ -243,7 +243,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private void spawnBonus(Brick brick) {
 
         BonusType type;
-        double dropChance = 1.0;
+        double dropChance = 0.3;
         if (brick.getRow() == 1) { // Первый ряд (ближний к мячу)
             type = BonusType.PADDLE_EXTEND;
         } else if (brick.getRow() == 2) { // Второй ряд
