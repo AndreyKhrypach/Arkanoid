@@ -144,7 +144,7 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private void updateBall() {
         if (ball.isStuckToPaddle()) {
-            ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
+            ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
             ball.setY(paddle.getY() - ball.getSize());
         } else {
             ball.move(1.0/60.0); // Fixed delta time for ball physics
@@ -186,8 +186,8 @@ public class GamePanel extends JPanel implements KeyListener {
         double relativeIntersect = (ballCenterX - paddleCenterX) / (paddle.getWidth() / 2f);
 
         float maxBounceAngle = 60f;
-        float minSpeed = 180f;
-        float speedBoost = 1.2f;
+        float minSpeed = 270f;
+        float speedBoost = 1.8f;
 
         double bounceAngle = relativeIntersect * maxBounceAngle;
         double paddleSpeed = paddle.getCurrentSpeed();
@@ -337,7 +337,7 @@ public class GamePanel extends JPanel implements KeyListener {
             case KeyEvent.VK_SPACE -> {
                 if (ball.isStuckToPaddle()) {
                     ball.setStuckToPaddle(false);
-                    ball.setSpeed(0, -250);
+                    ball.setSpeed(0, -375);
                 }
             }
             case KeyEvent.VK_LEFT -> leftPressed = true;
@@ -396,8 +396,8 @@ public class GamePanel extends JPanel implements KeyListener {
     private void resetAfterDeath() {
         ball.setStuckToPaddle(true);
         paddle.setWidth(initialPaddleWidth);
-        paddle.setPreciseX(WIDTH / 2 - initialPaddleWidth / 2);
-        ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
+        paddle.setPreciseX(WIDTH / 2.0 - initialPaddleWidth / 2.0);
+        ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
         ball.setY(paddle.getY() - ball.getSize());
         paddle.setCurrentSpeed(0);
     }
