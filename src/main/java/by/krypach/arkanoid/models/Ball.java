@@ -3,8 +3,8 @@ import java.awt.*;
 
 public class Ball {
     // Публичные константы для настройки игры
-    public static final double MAX_SPEED = 600.0;
-    public static final double MIN_SPEED = 150.0;
+    public static final double MAX_SPEED = 900.0;
+    public static final double MIN_SPEED = 225.0;
     public static final double SPEED_DAMPING = 0.995; // Легкое трение (0.98 = 2% потерь за кадр)
 
     private double x, y;
