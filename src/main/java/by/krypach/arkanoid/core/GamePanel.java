@@ -144,7 +144,7 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private void updateBall() {
         if (ball.isStuckToPaddle()) {
-            ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
+            ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
             ball.setY(paddle.getY() - ball.getSize());
         } else {
             ball.move(1.0/60.0); // Fixed delta time for ball physics
@@ -396,8 +396,8 @@ public class GamePanel extends JPanel implements KeyListener {
     private void resetAfterDeath() {
         ball.setStuckToPaddle(true);
         paddle.setWidth(initialPaddleWidth);
-        paddle.setPreciseX(WIDTH / 2 - initialPaddleWidth / 2);
-        ball.setX(paddle.getX() + paddle.getWidth() / 2 - ball.getSize() / 2);
+        paddle.setPreciseX(WIDTH / 2.0 - initialPaddleWidth / 2.0);
+        ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
         ball.setY(paddle.getY() - ball.getSize());
         paddle.setCurrentSpeed(0);
     }
