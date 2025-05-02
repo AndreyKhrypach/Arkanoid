@@ -31,11 +31,19 @@ public class Bonus {
             case PADDLE_EXTEND:
                 g.setColor(Color.CYAN);
                 break;
+            case BALL_SPEED_UP:
+                g.setColor(Color.ORANGE);
+                break;
             // Здесь будут другие типы бонусов
         }
         g.fillRect(x, y, WIDTH, HEIGHT);
         g.setColor(Color.BLACK);
         g.drawRect(x, y, WIDTH, HEIGHT);
+
+        if (type == BonusType.BALL_SPEED_UP) {
+            g.setColor(Color.RED);
+            g.drawString(">>", x + 8, y + 12);
+        }
     }
 
     public Rectangle getBounds() {

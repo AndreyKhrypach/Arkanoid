@@ -147,7 +147,7 @@ public class GamePanel extends JPanel implements KeyListener {
             ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
             ball.setY(paddle.getY() - ball.getSize());
         } else {
-            ball.move(1.0/60.0); // Fixed delta time for ball physics
+            ball.move(1.0 / 60.0); // Fixed delta time for ball physics
         }
     }
 
@@ -186,17 +186,18 @@ public class GamePanel extends JPanel implements KeyListener {
         double relativeIntersect = (ballCenterX - paddleCenterX) / (paddle.getWidth() / 2f);
 
         float maxBounceAngle = 60f;
-        float minSpeed = 270f;
+        float baseSpeed = 270f * (float)ball.getSpeedMultiplier(); // Учитываем текущий множитель скорости
         float speedBoost = 1.8f;
 
-        double bounceAngle = relativeIntersect * maxBounceAngle;
-        double paddleSpeed = paddle.getCurrentSpeed();
-        double speed = minSpeed + Math.abs(paddleSpeed) * speedBoost;
+        // Используем текущую скорость мяча или базовую, если текущая меньше
+        double currentSpeed = Math.sqrt(ball.getSpeedX()*ball.getSpeedX() + ball.getSpeedY()*ball.getSpeedY());
+        double speed = Math.max(baseSpeed, currentSpeed) + Math.abs(paddle.getCurrentSpeed()) * speedBoost;
 
+        double bounceAngle = relativeIntersect * maxBounceAngle;
         ball.setSpeed(
-                 speed * Math.sin(Math.toRadians(bounceAngle)),
+                speed * Math.sin(Math.toRadians(bounceAngle)),
                 -speed * Math.cos(Math.toRadians(bounceAngle))
-                );
+        );
         ball.setY(paddle.getY() - ball.getSize());
     }
 
@@ -204,10 +205,7 @@ public class GamePanel extends JPanel implements KeyListener {
         bricks.removeIf(brick -> {
             if (!brick.isDestroyed() && ball.getBounds().intersects(brick.getBounds())) {
                 handleBrickCollision(brick);
-
-                if (brick.getRow() == 1 && random.nextDouble() < 0.2) {
-                    spawnBonus(brick);
-                }
+                spawnBonus(brick);
 
                 // Основное изменение - добавление очков
                 addScore(brick.getRow() * brick.getMaxHits());
@@ -243,11 +241,24 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void spawnBonus(Brick brick) {
-        bonuses.add(new Bonus(
-                brick.getX() + brick.getWidth()/2 - Bonus.WIDTH/2,
-                brick.getY(),
-                BonusType.PADDLE_EXTEND
-        ));
+
+        BonusType type;
+        double dropChance = 1.0;
+        if (brick.getRow() == 1) { // Первый ряд (ближний к мячу)
+            type = BonusType.PADDLE_EXTEND;
+        } else if (brick.getRow() == 2) { // Второй ряд
+            type = BonusType.BALL_SPEED_UP;
+        } else {
+            return; // Бонусы только из 1 и 2 рядов
+        }
+
+        if (random.nextDouble() < dropChance) { // 20% шанс выпадения
+            bonuses.add(new Bonus(
+                    brick.getX() + brick.getWidth() / 2 - Bonus.WIDTH / 2,
+                    brick.getY(),
+                    type
+            ));
+        }
     }
 
     private void checkWinCondition() {
@@ -354,7 +365,8 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     @Override
-    public void keyTyped(KeyEvent e) {}
+    public void keyTyped(KeyEvent e) {
+    }
 
     // Game logic
     private void addScore(int points) {
@@ -374,8 +386,10 @@ public class GamePanel extends JPanel implements KeyListener {
         new Thread(() -> {
             for (int i = 0; i < 5; i++) {
                 setBackground(i % 2 == 0 ? Color.GREEN : Color.BLACK);
-                try { Thread.sleep(150); }
-                catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(150);
+                } catch (InterruptedException ignored) {
+                }
             }
             setBackground(Color.BLACK);
         }).start();
@@ -400,25 +414,49 @@ public class GamePanel extends JPanel implements KeyListener {
         ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
         ball.setY(paddle.getY() - ball.getSize());
         paddle.setCurrentSpeed(0);
+        ball.setColor(Color.WHITE); // Сброс цвета при потере жизни
+        ball.setSpeedMultiplier(1.0); // Сброс ускорения
     }
 
     private int determineHitsRequired(int row, Random random) {
         double chance = random.nextDouble();
         switch (row) {
-            case 0: return chance < 0.6 ? 1 : chance < 0.85 ? 2 : chance < 0.95 ? 3 : 4;
-            case 1: return chance < 0.4 ? 1 : chance < 0.7 ? 2 : chance < 0.9 ? 3 : 4;
-            case 2: return chance < 0.2 ? 1 : chance < 0.5 ? 2 : chance < 0.8 ? 3 : chance < 0.95 ? 4 : 5;
-            case 3: return chance < 0.1 ? 1 : chance < 0.3 ? 2 : chance < 0.6 ? 3 : chance < 0.85 ? 4 : 5;
-            case 4: return chance < 0.05 ? 1 : chance < 0.15 ? 2 : chance < 0.35 ? 3 : chance < 0.65 ? 4 : 5;
-            default: return 1;
+            case 0:
+                return chance < 0.6 ? 1 : chance < 0.85 ? 2 : chance < 0.95 ? 3 : 4;
+            case 1:
+                return chance < 0.4 ? 1 : chance < 0.7 ? 2 : chance < 0.9 ? 3 : 4;
+            case 2:
+                return chance < 0.2 ? 1 : chance < 0.5 ? 2 : chance < 0.8 ? 3 : chance < 0.95 ? 4 : 5;
+            case 3:
+                return chance < 0.1 ? 1 : chance < 0.3 ? 2 : chance < 0.6 ? 3 : chance < 0.85 ? 4 : 5;
+            case 4:
+                return chance < 0.05 ? 1 : chance < 0.15 ? 2 : chance < 0.35 ? 3 : chance < 0.65 ? 4 : 5;
+            default:
+                return 1;
         }
     }
 
     private void applyBonus(BonusType type) {
-        if (type == BonusType.PADDLE_EXTEND) {
-            int newWidth = Math.min(paddle.getWidth() + 20, PADDLE_MAX_WIDTH);
-            if (newWidth > paddle.getWidth()) {
-                paddle.setWidth(newWidth);
+        switch (type) {
+            case PADDLE_EXTEND -> {
+                int newWidth = Math.min(paddle.getWidth() + 20, PADDLE_MAX_WIDTH);
+                if (newWidth > paddle.getWidth()) {
+                    paddle.setWidth(newWidth);
+                }
+            }
+            case BALL_SPEED_UP -> {
+                // Плавное наращивание скорости вместо резкого скачка
+                double targetMultiplier = Ball.SPEED_BOOST;
+                if (ball.getSpeedMultiplier() < targetMultiplier) {
+                    ball.setSpeedMultiplier(targetMultiplier);
+                    ball.setColor(new Color(255, 165, 0)); // Яркий оранжевый
+
+                    // Визуальный эффект
+                    new Timer(10000, e -> {
+                        // Плавное снижение скорости после таймера
+                        // (автоматически обрабатывается в move())
+                    }).start();
+                }
             }
         }
     }
