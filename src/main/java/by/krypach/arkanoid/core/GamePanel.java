@@ -186,8 +186,8 @@ public class GamePanel extends JPanel implements KeyListener {
         double relativeIntersect = (ballCenterX - paddleCenterX) / (paddle.getWidth() / 2f);
 
         float maxBounceAngle = 60f;
-        float minSpeed = 180f;
-        float speedBoost = 1.2f;
+        float minSpeed = 270f;
+        float speedBoost = 1.8f;
 
         double bounceAngle = relativeIntersect * maxBounceAngle;
         double paddleSpeed = paddle.getCurrentSpeed();
@@ -337,7 +337,7 @@ public class GamePanel extends JPanel implements KeyListener {
             case KeyEvent.VK_SPACE -> {
                 if (ball.isStuckToPaddle()) {
                     ball.setStuckToPaddle(false);
-                    ball.setSpeed(0, -250);
+                    ball.setSpeed(0, -375);
                 }
             }
             case KeyEvent.VK_LEFT -> leftPressed = true;

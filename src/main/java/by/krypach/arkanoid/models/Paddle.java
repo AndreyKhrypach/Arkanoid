@@ -4,9 +4,9 @@ import java.awt.*;
 
 public class Paddle {
     private static final int GAME_WIDTH = 800;
-    private static final float ACCELERATION = 0.5f;
+    private static final float ACCELERATION = 0.75f;
     private static final float DECELERATION = 0.3f;
-    private static final float MAX_SPEED = 12f;
+    private static final float MAX_SPEED = 18f;
 
     private double preciseX;
     private final int y;
