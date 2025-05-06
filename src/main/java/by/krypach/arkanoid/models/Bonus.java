@@ -34,15 +34,24 @@ public class Bonus {
             case BALL_SPEED_UP:
                 g.setColor(Color.ORANGE);
                 break;
-            // Здесь будут другие типы бонусов
+            case EXTRA_BALL:
+                g.setColor(Color.MAGENTA);
+                break;
         }
         g.fillRect(x, y, WIDTH, HEIGHT);
         g.setColor(Color.BLACK);
         g.drawRect(x, y, WIDTH, HEIGHT);
 
-        if (type == BonusType.BALL_SPEED_UP) {
-            g.setColor(Color.RED);
-            g.drawString(">>", x + 8, y + 12);
+        // Добавляем обозначения для новых бонусов
+        switch (type) {
+            case BALL_SPEED_UP:
+                g.setColor(Color.RED);
+                g.drawString(">>", x + 8, y + 12);
+                break;
+            case EXTRA_BALL:
+                g.setColor(Color.WHITE);
+                g.drawString("+1", x + 8, y + 12);
+                break;
         }
     }
 
