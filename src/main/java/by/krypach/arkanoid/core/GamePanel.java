@@ -37,9 +37,11 @@ public class GamePanel extends JPanel implements KeyListener {
     private int deathAnimationCounter = 0;
     private boolean isRunning = true;
     private boolean isPaused = false;
+    private boolean timeSlowActive = false;
+    private float timeSlowRemaining = 0;
+    private Color currentBackground = Color.BLACK;
 
     // models
-//    private final Ball ball;
     private final Paddle paddle;
     private final List<Brick> bricks = new ArrayList<>();
     private final List<Bonus> bonuses = new ArrayList<>();
@@ -73,6 +75,58 @@ public class GamePanel extends JPanel implements KeyListener {
         startGameLoop();
     }
 
+    public void update(double deltaTime) {
+        if (!isRunning || isPaused) return;
+
+        updateBonuses(deltaTime);
+        checkBallsLoss();
+        updatePaddle(deltaTime);
+        updateBalls(deltaTime);
+        checkCollisions();
+        checkWinCondition();
+    }
+
+    // Input handling
+    @Override
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_P -> isPaused = !isPaused;
+            case KeyEvent.VK_SPACE -> {
+                for (Ball ball : balls) {
+                    if (ball.isStuckToPaddle()) {
+                        ball.setStuckToPaddle(false);
+                        ball.setSpeed(0, -375);
+                    }
+                }
+            }
+            case KeyEvent.VK_LEFT -> leftPressed = true;
+            case KeyEvent.VK_RIGHT -> rightPressed = true;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_LEFT -> leftPressed = false;
+            case KeyEvent.VK_RIGHT -> rightPressed = false;
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        setBackground(currentBackground); // Устанавливаем текущий цвет фона
+        super.paintComponent(g); // Теперь фон будет правильным
+
+        drawHUD(g);
+        drawGameState(g);
+        drawModels(g);
+        drawBorders(g);
+    }
+
     private void setupInput() {
         addKeyListener(this);
         setFocusable(true);
@@ -104,17 +158,6 @@ public class GamePanel extends JPanel implements KeyListener {
                 ));
             }
         }
-    }
-
-    public void update(double deltaTime) {
-        if (!isRunning || isPaused) return;
-
-        updateBonuses(deltaTime);
-        checkBallsLoss();
-        updatePaddle(deltaTime);
-        updateBalls(deltaTime);
-        checkCollisions();
-        checkWinCondition();
     }
 
     private void updateBonuses(double deltaTime) {
@@ -259,14 +302,13 @@ public class GamePanel extends JPanel implements KeyListener {
         BonusType type;
         double dropChance = 0.3;
 
-        if (brick.getRow() == 1) { // Первый ряд
-            type = BonusType.PADDLE_EXTEND;
-        } else if (brick.getRow() == 2) { // Второй ряд
-            type = BonusType.BALL_SPEED_UP;
-        } else if (brick.getRow() == 3) { // Третий ряд - новый бонус
-            type = BonusType.EXTRA_BALL;
-        } else {
-            return; // Бонусы только из 1-3 рядов
+        switch(brick.getRow()) {
+            case 1: type = BonusType.PADDLE_EXTEND; break;
+            case 2: type = BonusType.BALL_SPEED_UP; break;
+            case 3: type = BonusType.EXTRA_BALL; break;
+            case 4: type = BonusType.TIME_SLOW; break;
+            case 5: type = BonusType.EXTRA_LIFE; break;
+            default: return; // Для 5 ряда бонусов нет
         }
 
         if (random.nextDouble() < dropChance) {
@@ -282,16 +324,6 @@ public class GamePanel extends JPanel implements KeyListener {
         if (bricks.isEmpty()) {
             isRunning = false;
         }
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-
-        drawHUD(g);
-        drawGameState(g);
-        drawEntities(g);
-        drawBorders(g);
     }
 
     private void drawHUD(Graphics g) {
@@ -313,6 +345,13 @@ public class GamePanel extends JPanel implements KeyListener {
 
         if (isPaused) {
             drawCenteredText(g, "PAUSED", 40, 300);
+        }
+
+        if (timeSlowActive) {
+            // Рисуем полосу прогресса вверху экрана
+            int progressWidth = (int)(WIDTH * (timeSlowRemaining / 15000f));
+            g.setColor(new Color(100, 100, 255, 200));
+            g.fillRect(0, 5, progressWidth, 5);
         }
 
         if (!isRunning) {
@@ -340,7 +379,7 @@ public class GamePanel extends JPanel implements KeyListener {
         g.drawString(scoreText, WIDTH / 2 - width / 2, HEIGHT / 2 + 40);
     }
 
-    private void drawEntities(Graphics g) {
+    private void drawModels(Graphics g) {
         if (isRunning) {
             bonuses.forEach(bonus -> bonus.draw(g));
             balls.forEach(ball -> ball.draw(g)); // Рисуем все мячи
@@ -355,36 +394,6 @@ public class GamePanel extends JPanel implements KeyListener {
         g.drawLine(0, HEIGHT - 1, WIDTH, HEIGHT - 1);
         g.drawLine(0, 0, 0, HEIGHT);
         g.drawLine(WIDTH - 1, 0, WIDTH - 1, HEIGHT);
-    }
-
-    // Input handling
-    @Override
-    public void keyPressed(KeyEvent e) {
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_P -> isPaused = !isPaused;
-            case KeyEvent.VK_SPACE -> {
-                for (Ball ball : balls) {
-                    if (ball.isStuckToPaddle()) {
-                        ball.setStuckToPaddle(false);
-                        ball.setSpeed(0, -375);
-                    }
-                }
-            }
-            case KeyEvent.VK_LEFT -> leftPressed = true;
-            case KeyEvent.VK_RIGHT -> rightPressed = true;
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_LEFT -> leftPressed = false;
-            case KeyEvent.VK_RIGHT -> rightPressed = false;
-        }
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {
     }
 
     // Game logic
@@ -487,6 +496,54 @@ public class GamePanel extends JPanel implements KeyListener {
                 // Добавляем небольшой случайный угол
                 newBall.setSpeedX((random.nextBoolean() ? 1 : -1) * random.nextInt(100));
                 balls.add(newBall);
+            }
+            case TIME_SLOW -> {
+                final float slowFactor = 0.4f;
+                final int slowDuration = 15000;
+                timeSlowActive = true;
+                timeSlowRemaining = slowDuration;
+
+                // Применяем замедление ко всем мячам
+                balls.forEach(ball -> ball.setSpeedMultiplier(slowFactor));
+
+                // Устанавливаем синий фон
+                currentBackground = new Color(70, 70, 255, 50);
+
+                // Таймер возврата к нормальной скорости
+                Timer restoreTimer = new Timer(slowDuration, e -> {
+                    balls.forEach(ball -> {
+                        if (ball.getSpeedMultiplier() == slowFactor) {
+                            ball.setSpeedMultiplier(1.0f);
+                        }
+                    });
+                    currentBackground = Color.BLACK;
+                    timeSlowActive = false;
+                    repaint();
+                });
+                restoreTimer.setRepeats(false);
+                restoreTimer.start();
+
+                // Таймер для обновления прогресс-бара
+                new Timer(100, e -> {
+                    timeSlowRemaining -= 100;
+                    if (timeSlowRemaining <= 0) {
+                        ((Timer)e.getSource()).stop();
+                    }
+                    repaint();
+                }).start();
+
+            }
+            case EXTRA_LIFE -> {
+                lives++;
+                // Эффект получения жизни
+                new Thread(() -> {
+                    for (int i = 0; i < 5; i++) {
+                        setBackground(i % 2 == 0 ? Color.PINK : Color.BLACK);
+                        try { Thread.sleep(150); }
+                        catch (InterruptedException ignored) {}
+                    }
+                    setBackground(Color.BLACK);
+                }).start();
             }
         }
     }
