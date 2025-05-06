@@ -7,6 +7,7 @@ import by.krypach.arkanoid.models.Brick;
 import by.krypach.arkanoid.models.Paddle;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javax.swing.*;
 import java.awt.*;
@@ -38,10 +39,11 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean isPaused = false;
 
     // models
-    private final Ball ball;
+//    private final Ball ball;
     private final Paddle paddle;
     private final List<Brick> bricks = new ArrayList<>();
     private final List<Bonus> bonuses = new ArrayList<>();
+    private final List<Ball> balls = new ArrayList<>();
 
     // Input
     private boolean leftPressed = false;
@@ -54,7 +56,7 @@ public class GamePanel extends JPanel implements KeyListener {
 
     public GamePanel() {
         // Initialize entities first
-        this.ball = new Ball(WIDTH / 2, HEIGHT / 2, 0, 0);
+        this.balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 0, 0));
         this.paddle = new Paddle(
                 WIDTH / 2 - PADDLE_INITIAL_WIDTH / 2,
                 HEIGHT - 50,
@@ -108,9 +110,9 @@ public class GamePanel extends JPanel implements KeyListener {
         if (!isRunning || isPaused) return;
 
         updateBonuses(deltaTime);
-        checkBallLoss();
+        checkBallsLoss();
         updatePaddle(deltaTime);
-        updateBall();
+        updateBalls(deltaTime);
         checkCollisions();
         checkWinCondition();
     }
@@ -127,8 +129,17 @@ public class GamePanel extends JPanel implements KeyListener {
         });
     }
 
-    private void checkBallLoss() {
-        if (ball.getY() >= HEIGHT) {
+    private void checkBallsLoss() {
+        Iterator<Ball> iterator = balls.iterator();
+        while (iterator.hasNext()) {
+            Ball ball = iterator.next();
+            if (ball.getY() >= HEIGHT) {
+                iterator.remove();
+            }
+        }
+
+        // Если мячей не осталось, теряем жизнь
+        if (balls.isEmpty()) {
             loseLife();
         }
     }
@@ -142,12 +153,14 @@ public class GamePanel extends JPanel implements KeyListener {
         paddle.update(deltaTime);
     }
 
-    private void updateBall() {
-        if (ball.isStuckToPaddle()) {
-            ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
-            ball.setY(paddle.getY() - ball.getSize());
-        } else {
-            ball.move(1.0 / 60.0); // Fixed delta time for ball physics
+    private void updateBalls(double deltaTime) {
+        for (Ball ball : balls) {
+            if (ball.isStuckToPaddle()) {
+                ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
+                ball.setY(paddle.getY() - ball.getSize());
+            } else {
+                ball.move(deltaTime);
+            }
         }
     }
 
@@ -158,39 +171,42 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void checkWallCollisions() {
-        // Left/right walls
-        if (ball.getX() <= 0 || ball.getX() >= WIDTH - ball.getSize()) {
-            ball.reverseX();
-            ball.setX(Math.max(1, Math.min(ball.getX(), WIDTH - ball.getSize() - 1)));
-        }
+        for (Ball ball : balls) {
+            // Левый/правый края
+            if (ball.getX() <= 0 || ball.getX() >= WIDTH - ball.getSize()) {
+                ball.reverseX();
+                ball.setX(Math.max(1, Math.min(ball.getX(), WIDTH - ball.getSize() - 1)));
+            }
 
-        // Top wall
-        if (ball.getY() <= 0) {
-            ball.reverseY();
-            ball.setY(1);
-            if (Math.abs(ball.getSpeedX()) < 10) {
-                ball.setSpeedX(ball.getSpeedX() + (random.nextBoolean() ? 15 : -15));
+            // Верхний край
+            if (ball.getY() <= 0) {
+                ball.reverseY();
+                ball.setY(1);
+                if (Math.abs(ball.getSpeedX()) < 10) {
+                    ball.setSpeedX(ball.getSpeedX() + (random.nextBoolean() ? 15 : -15));
+                }
             }
         }
     }
 
     private void checkPaddleCollision() {
-        if (ball.getBounds().intersects(paddle.getBounds()) && !ball.isStuckToPaddle()) {
-            handlePaddleCollision();
+        for (Ball ball : balls) {
+            if (ball.getBounds().intersects(paddle.getBounds()) && !ball.isStuckToPaddle()) {
+                handlePaddleCollision(ball);
+            }
         }
     }
 
-    private void handlePaddleCollision() {
+    private void handlePaddleCollision(Ball ball) {
         double ballCenterX = ball.getX() + ball.getSize() / 2f;
         float paddleCenterX = paddle.getX() + paddle.getWidth() / 2f;
         double relativeIntersect = (ballCenterX - paddleCenterX) / (paddle.getWidth() / 2f);
 
         float maxBounceAngle = 60f;
-        float baseSpeed = 270f * (float)ball.getSpeedMultiplier(); // Учитываем текущий множитель скорости
+        float baseSpeed = 270f * (float) ball.getSpeedMultiplier();
         float speedBoost = 1.8f;
 
-        // Используем текущую скорость мяча или базовую, если текущая меньше
-        double currentSpeed = Math.sqrt(ball.getSpeedX()*ball.getSpeedX() + ball.getSpeedY()*ball.getSpeedY());
+        double currentSpeed = Math.sqrt(ball.getSpeedX() * ball.getSpeedX() + ball.getSpeedY() * ball.getSpeedY());
         double speed = Math.max(baseSpeed, currentSpeed) + Math.abs(paddle.getCurrentSpeed()) * speedBoost;
 
         double bounceAngle = relativeIntersect * maxBounceAngle;
@@ -202,27 +218,26 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void checkBrickCollisions() {
-        bricks.removeIf(brick -> {
-            if (!brick.isDestroyed() && ball.getBounds().intersects(brick.getBounds())) {
-                handleBrickCollision(brick);
-                spawnBonus(brick);
-
-                // Основное изменение - добавление очков
-                addScore(brick.getRow() * brick.getMaxHits());
-
-                return brick.hit();
-            }
-            return false;
-        });
+        for (Ball ball : balls) {
+            bricks.removeIf(brick -> {
+                if (!brick.isDestroyed() && ball.getBounds().intersects(brick.getBounds())) {
+                    handleBrickCollision(ball, brick);
+                    spawnBonus(brick);
+                    addScore(brick.getRow() * brick.getMaxHits());
+                    return brick.hit();
+                }
+                return false;
+            });
+        }
     }
 
-    private void handleBrickCollision(Brick brick) {
+    private void handleBrickCollision(Ball ball, Brick brick) {
         Rectangle ballRect = ball.getBounds();
         Rectangle brickRect = brick.getBounds();
         Rectangle intersection = ballRect.intersection(brickRect);
 
         if (intersection.width > intersection.height) {
-            // Vertical collision
+            // Вертикальное столкновение
             if (ballRect.y < brickRect.y) {
                 ball.setY(brickRect.y - ball.getSize());
             } else {
@@ -230,7 +245,7 @@ public class GamePanel extends JPanel implements KeyListener {
             }
             ball.reverseY();
         } else {
-            // Horizontal collision
+            // Горизонтальное столкновение
             if (ballRect.x < brickRect.x) {
                 ball.setX(brickRect.x - ball.getSize());
             } else {
@@ -241,18 +256,20 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void spawnBonus(Brick brick) {
-
         BonusType type;
         double dropChance = 0.3;
-        if (brick.getRow() == 1) { // Первый ряд (ближний к мячу)
+
+        if (brick.getRow() == 1) { // Первый ряд
             type = BonusType.PADDLE_EXTEND;
         } else if (brick.getRow() == 2) { // Второй ряд
             type = BonusType.BALL_SPEED_UP;
+        } else if (brick.getRow() == 3) { // Третий ряд - новый бонус
+            type = BonusType.EXTRA_BALL;
         } else {
-            return; // Бонусы только из 1 и 2 рядов
+            return; // Бонусы только из 1-3 рядов
         }
 
-        if (random.nextDouble() < dropChance) { // 20% шанс выпадения
+        if (random.nextDouble() < dropChance) {
             bonuses.add(new Bonus(
                     brick.getX() + brick.getWidth() / 2 - Bonus.WIDTH / 2,
                     brick.getY(),
@@ -326,7 +343,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private void drawEntities(Graphics g) {
         if (isRunning) {
             bonuses.forEach(bonus -> bonus.draw(g));
-            ball.draw(g);
+            balls.forEach(ball -> ball.draw(g)); // Рисуем все мячи
             paddle.draw(g);
             bricks.forEach(brick -> brick.draw(g));
         }
@@ -346,9 +363,11 @@ public class GamePanel extends JPanel implements KeyListener {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_P -> isPaused = !isPaused;
             case KeyEvent.VK_SPACE -> {
-                if (ball.isStuckToPaddle()) {
-                    ball.setStuckToPaddle(false);
-                    ball.setSpeed(0, -375);
+                for (Ball ball : balls) {
+                    if (ball.isStuckToPaddle()) {
+                        ball.setStuckToPaddle(false);
+                        ball.setSpeed(0, -375);
+                    }
                 }
             }
             case KeyEvent.VK_LEFT -> leftPressed = true;
@@ -408,14 +427,19 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void resetAfterDeath() {
+        // Оставляем только один мяч
+        balls.clear();
+        Ball ball = new Ball(
+                paddle.getX() + paddle.getWidth() / 2 - Ball.DEFAULT_SIZE / 2,
+                paddle.getY() - Ball.DEFAULT_SIZE,
+                0, 0
+        );
         ball.setStuckToPaddle(true);
+        balls.add(ball);
+
         paddle.setWidth(initialPaddleWidth);
         paddle.setPreciseX(WIDTH / 2.0 - initialPaddleWidth / 2.0);
-        ball.setX(paddle.getX() + paddle.getWidth() / 2.0 - ball.getSize() / 2.0);
-        ball.setY(paddle.getY() - ball.getSize());
         paddle.setCurrentSpeed(0);
-        ball.setColor(Color.WHITE); // Сброс цвета при потере жизни
-        ball.setSpeedMultiplier(1.0); // Сброс ускорения
     }
 
     private int determineHitsRequired(int row, Random random) {
@@ -445,18 +469,24 @@ public class GamePanel extends JPanel implements KeyListener {
                 }
             }
             case BALL_SPEED_UP -> {
-                // Плавное наращивание скорости вместо резкого скачка
                 double targetMultiplier = Ball.SPEED_BOOST;
-                if (ball.getSpeedMultiplier() < targetMultiplier) {
-                    ball.setSpeedMultiplier(targetMultiplier);
-                    ball.setColor(new Color(255, 165, 0)); // Яркий оранжевый
-
-                    // Визуальный эффект
-                    new Timer(10000, e -> {
-                        // Плавное снижение скорости после таймера
-                        // (автоматически обрабатывается в move())
-                    }).start();
+                for (Ball ball : balls) {
+                    if (ball.getSpeedMultiplier() < targetMultiplier) {
+                        ball.setSpeedMultiplier(targetMultiplier);
+                        ball.setColor(new Color(255, 165, 0));
+                    }
                 }
+            }
+            case EXTRA_BALL -> {
+                // Создаем новый мяч со случайным направлением
+                Ball newBall = new Ball(
+                        paddle.getX() + paddle.getWidth() / 2 - Ball.DEFAULT_SIZE / 2,
+                        paddle.getY() - Ball.DEFAULT_SIZE,
+                        0, -375
+                );
+                // Добавляем небольшой случайный угол
+                newBall.setSpeedX((random.nextBoolean() ? 1 : -1) * random.nextInt(100));
+                balls.add(newBall);
             }
         }
     }
