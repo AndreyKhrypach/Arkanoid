@@ -19,5 +19,3 @@ public class ArkanoidGame extends JFrame {
         });
     }
 }
-
-
