@@ -63,7 +63,6 @@ public class Paddle {
         this.preciseX = Math.max(0, Math.min(center - newWidth / 2.0, maxXPosition));
     }
 
-    // Геттеры
     public int getX() {
         return (int) Math.round(preciseX);
     }
@@ -72,7 +71,6 @@ public class Paddle {
     public int getHeight() { return height; }
     public float getCurrentSpeed() { return currentSpeed; }
 
-    // Сеттеры
     public void setCurrentSpeed(float speed) { this.currentSpeed = speed; }
     public void setPreciseX(double x) { this.preciseX = x; }
 }

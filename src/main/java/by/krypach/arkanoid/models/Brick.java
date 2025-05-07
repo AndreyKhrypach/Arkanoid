@@ -5,12 +5,13 @@ import java.awt.*;
 public class Brick {
     private final int x, y;
     private final int width, height;
-    private final int row; // Добавляем номер ряда (1-5)
+    private final int row;
     private boolean isDestroyed;
-    private final Color color; // Цвет в зависимости от ряда
-    private int maxHits;  // Сколько всего нужно ударов для разрушения
-    private int currentHits; // Сколько ударов уже было
-    private final Color[] hitColors; // Цвета для разных уровней живучести
+    private Color color;
+    private int maxHits;
+    private int currentHits;
+    private final Color[] hitColors;
+
 
     public Brick(int x, int y, int width, int height, int row, int maxHits) {
         this.x = x;
@@ -22,7 +23,6 @@ public class Brick {
         this.maxHits = maxHits;
         this.currentHits = 0;
 
-        // Цвета для разных уровней живучести (можно настроить)
         this.hitColors = new Color[] {
                 new Color(255, 182, 193), // 1 удар
                 Color.YELLOW,             // 2 удара
@@ -31,11 +31,9 @@ public class Brick {
                 new Color(128, 0, 128)    // 5 ударов
         };
 
-        // Устанавливаем цвет в зависимости от живучести (но не более 5)
         this.color = hitColors[Math.min(maxHits - 1, hitColors.length - 1)];
     }
 
-    // Отрисовка кирпича (теперь с цифрой живучести)
     public void draw(Graphics g) {
         if (!isDestroyed) {
             g.setColor(color);
@@ -43,7 +41,6 @@ public class Brick {
             g.setColor(Color.WHITE);
             g.drawRect(x, y, width, height);
 
-            // Рисуем цифру оставшихся ударов
             int hitsLeft = maxHits - currentHits;
             String hitsText = String.valueOf(hitsLeft);
             g.setColor(Color.BLACK);
@@ -59,29 +56,34 @@ public class Brick {
         }
     }
 
-    // Получение "границ" кирпича для коллизий
     public Rectangle getBounds() {
         return new Rectangle(x, y, width, height);
     }
 
-    // Обработка попадания по кирпичу
     public boolean hit() {
         currentHits++;
         if (currentHits >= maxHits) {
             isDestroyed = true;
-            return true; // Кирпич разрушен
+            return true;
         }
-        return false; // Кирпич еще жив
+        return false;
     }
 
-    // Разрушение кирпича
     public void destroy() {
         isDestroyed = true;
     }
 
-    // Проверка, разрушен ли кирпич
     public boolean isDestroyed() {
         return isDestroyed;
+    }
+
+    public boolean isAlive() {
+        return !isDestroyed && currentHits < maxHits;
+    }
+
+    public void reset() {
+        this.isDestroyed = false;
+        this.currentHits = 0;
     }
 
     public int getRow() {
@@ -102,5 +104,9 @@ public class Brick {
 
     public int getWidth() {
         return width;
+    }
+
+    public void setColor(Color color) {
+        this.color = color;
     }
 }
