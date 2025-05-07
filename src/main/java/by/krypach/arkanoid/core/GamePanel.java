@@ -1,6 +1,8 @@
 package by.krypach.arkanoid.core;
 
 import by.krypach.arkanoid.enums.BonusType;
+import by.krypach.arkanoid.game.Level;
+import by.krypach.arkanoid.game.LevelGenerator;
 import by.krypach.arkanoid.models.Ball;
 import by.krypach.arkanoid.models.Bonus;
 import by.krypach.arkanoid.models.Brick;
@@ -40,6 +42,10 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean timeSlowActive = false;
     private float timeSlowRemaining = 0;
     private Color currentBackground = Color.BLACK;
+    private int currentLevelNumber = 1;
+    private Level currentLevel;
+    private boolean levelCompleted = false;
+    private boolean levelTransitionInProgress = false;
 
     // models
     private final Paddle paddle;
@@ -51,13 +57,16 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean leftPressed = false;
     private boolean rightPressed = false;
 
+    //level
+    private final LevelGenerator levelGenerator;
+
     // Game loop
     private long lastTime = System.nanoTime();
     private final int initialPaddleWidth;
     private final Random random = new Random();
 
     public GamePanel() {
-        // Initialize entities first
+        this.levelGenerator = new LevelGenerator();
         this.balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 0, 0));
         this.paddle = new Paddle(
                 WIDTH / 2 - PADDLE_INITIAL_WIDTH / 2,
@@ -70,7 +79,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        initBricks(); // Initialize bricks after paddle is created
+        loadLevel(currentLevelNumber);
 
         startGameLoop();
     }
@@ -92,10 +101,12 @@ public class GamePanel extends JPanel implements KeyListener {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_P -> isPaused = !isPaused;
             case KeyEvent.VK_SPACE -> {
-                for (Ball ball : balls) {
-                    if (ball.isStuckToPaddle()) {
-                        ball.setStuckToPaddle(false);
-                        ball.setSpeed(0, -375);
+                if (!balls.isEmpty()) {
+                    for (Ball ball : balls) {
+                        if (ball.isStuckToPaddle()) {
+                            ball.setStuckToPaddle(false);
+                            ball.setSpeed(0, -375);
+                        }
                     }
                 }
             }
@@ -118,8 +129,8 @@ public class GamePanel extends JPanel implements KeyListener {
 
     @Override
     protected void paintComponent(Graphics g) {
-        setBackground(currentBackground); // Устанавливаем текущий цвет фона
-        super.paintComponent(g); // Теперь фон будет правильным
+        setBackground(currentBackground);
+        super.paintComponent(g);
 
         drawHUD(g);
         drawGameState(g);
@@ -160,6 +171,56 @@ public class GamePanel extends JPanel implements KeyListener {
         }
     }
 
+    private void loadLevel(int levelNumber) {
+        bonuses.clear();
+        levelCompleted = false; // Явный сброс флага
+        levelTransitionInProgress = false;
+
+        boolean wasStuck = !balls.isEmpty() && balls.get(0).isStuckToPaddle();
+        double speedX = balls.isEmpty() ? 0 : balls.get(0).getSpeedX();
+        double speedY = balls.isEmpty() ? 0 : balls.get(0).getSpeedY();
+
+        this.currentLevel = levelGenerator.generateLevel(
+                levelNumber,
+                5, // rows
+                10, // cols
+                random
+        );
+
+        this.bricks.clear();
+        this.bricks.addAll(currentLevel.getBricks());
+
+        // Сбрасываем состояние всех кирпичей
+        for (Brick brick : bricks) {
+            brick.reset();
+        }
+
+        resetAfterLevelStart(wasStuck, speedX, speedY);
+    }
+
+    private void resetAfterLevelStart(boolean keepStuck, double speedX, double speedY) {
+        balls.clear();
+        Ball newBall = createNewBall();
+        newBall.setStuckToPaddle(keepStuck);
+        if (!keepStuck) {
+            newBall.setSpeed(speedX, speedY);
+        }
+        balls.add(newBall);
+
+        paddle.setWidth(initialPaddleWidth);
+        paddle.setPreciseX(WIDTH / 2.0 - initialPaddleWidth / 2.0);
+    }
+
+    private Ball createNewBall() {
+        Ball ball = new Ball(
+                paddle.getX() + paddle.getWidth() / 2 - Ball.DEFAULT_SIZE / 2,
+                paddle.getY() - Ball.DEFAULT_SIZE,
+                0, 0
+        );
+        ball.setStuckToPaddle(true);
+        return ball;
+    }
+
     private void updateBonuses(double deltaTime) {
         bonuses.removeIf(bonus -> {
             bonus.update(deltaTime);
@@ -181,7 +242,6 @@ public class GamePanel extends JPanel implements KeyListener {
             }
         }
 
-        // Если мячей не осталось, теряем жизнь
         if (balls.isEmpty()) {
             loseLife();
         }
@@ -215,13 +275,11 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private void checkWallCollisions() {
         for (Ball ball : balls) {
-            // Левый/правый края
             if (ball.getX() <= 0 || ball.getX() >= WIDTH - ball.getSize()) {
                 ball.reverseX();
                 ball.setX(Math.max(1, Math.min(ball.getX(), WIDTH - ball.getSize() - 1)));
             }
 
-            // Верхний край
             if (ball.getY() <= 0) {
                 ball.reverseY();
                 ball.setY(1);
@@ -262,15 +320,20 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private void checkBrickCollisions() {
         for (Ball ball : balls) {
-            bricks.removeIf(brick -> {
-                if (!brick.isDestroyed() && ball.getBounds().intersects(brick.getBounds())) {
+            Iterator<Brick> iterator = bricks.iterator();
+            while (iterator.hasNext()) {
+                Brick brick = iterator.next();
+                if (brick.isAlive() && ball.getBounds().intersects(brick.getBounds())) {
                     handleBrickCollision(ball, brick);
+                    boolean wasDestroyed = brick.hit();
                     spawnBonus(brick);
                     addScore(brick.getRow() * brick.getMaxHits());
-                    return brick.hit();
+
+                    if (wasDestroyed) {
+                        iterator.remove();
+                    }
                 }
-                return false;
-            });
+            }
         }
     }
 
@@ -280,7 +343,6 @@ public class GamePanel extends JPanel implements KeyListener {
         Rectangle intersection = ballRect.intersection(brickRect);
 
         if (intersection.width > intersection.height) {
-            // Вертикальное столкновение
             if (ballRect.y < brickRect.y) {
                 ball.setY(brickRect.y - ball.getSize());
             } else {
@@ -288,7 +350,6 @@ public class GamePanel extends JPanel implements KeyListener {
             }
             ball.reverseY();
         } else {
-            // Горизонтальное столкновение
             if (ballRect.x < brickRect.x) {
                 ball.setX(brickRect.x - ball.getSize());
             } else {
@@ -308,7 +369,7 @@ public class GamePanel extends JPanel implements KeyListener {
             case 3: type = BonusType.EXTRA_BALL; break;
             case 4: type = BonusType.TIME_SLOW; break;
             case 5: type = BonusType.EXTRA_LIFE; break;
-            default: return; // Для 5 ряда бонусов нет
+            default: return;
         }
 
         if (random.nextDouble() < dropChance) {
@@ -321,22 +382,68 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void checkWinCondition() {
-        if (bricks.isEmpty()) {
-            isRunning = false;
+        if (levelCompleted || levelTransitionInProgress || !isRunning) return;
+
+        boolean allDestroyed = true;
+        for (Brick brick : bricks) {
+            if (brick.isAlive()) {
+                allDestroyed = false;
+                break;
+            }
         }
+
+        if (allDestroyed) {
+            levelCompleted = true;
+            showLevelComplete();
+        }
+    }
+
+    private void showLevelComplete() {
+        if (levelTransitionInProgress) return;
+        levelTransitionInProgress = true;
+
+        isPaused = true;
+        Timer transitionTimer = new Timer(2000, e -> {
+            if (currentLevelNumber < 10) {
+                currentLevelNumber++;
+                loadLevel(currentLevelNumber);
+            } else {
+                gameComplete();
+                ((Timer)e.getSource()).stop();
+            }
+            isPaused = false;
+            levelTransitionInProgress = false;
+        });
+        transitionTimer.setRepeats(false);
+        transitionTimer.start();
+    }
+
+    private void gameComplete() {
+        isRunning = false;
+        levelCompleted = true;
+        balls.clear();
+        bonuses.clear();
+
+        drawCenteredText(getGraphics(), "ИГРА ЗАВЕРШЕНА! Финальный счет: " + score, 30, HEIGHT/2);
+        repaint();
     }
 
     private void drawHUD(Graphics g) {
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("Уровень: " + currentLevelNumber, 300, 30);
         g.drawString("Жизни: " + lives, 20, 30);
-
         String scoreText = "Очки: " + score;
         int scoreWidth = g.getFontMetrics().stringWidth(scoreText);
         g.drawString(scoreText, WIDTH - scoreWidth - 20, 30);
     }
 
     private void drawGameState(Graphics g) {
+        if (isPaused && levelCompleted) {
+            drawCenteredText(g, "Уровень " + (currentLevelNumber-1) + " пройден!", 40, HEIGHT/2 - 50);
+            drawCenteredText(g, "Переход на уровень " + currentLevelNumber, 30, HEIGHT/2 + 20);
+        }
+
         if (deathAnimationCounter > 0) {
             g.setColor(new Color(255, 0, 0, 70));
             g.fillRect(0, 0, WIDTH, HEIGHT);
@@ -355,8 +462,9 @@ public class GamePanel extends JPanel implements KeyListener {
         }
 
         if (!isRunning) {
-            if (bricks.isEmpty()) {
-                drawCenteredText(g, "Ты победил!", 30, 300);
+            if (levelCompleted && currentLevelNumber >= 10) {
+                drawCenteredText(g, "ИГРА ЗАВЕРШЕНА!", 40, HEIGHT/2 - 30);
+                drawCenteredText(g, "Финальный счет: " + score, 30, HEIGHT/2 + 20);
             } else if (lives <= 0) {
                 drawGameOver(g);
             }
@@ -396,7 +504,6 @@ public class GamePanel extends JPanel implements KeyListener {
         g.drawLine(WIDTH - 1, 0, WIDTH - 1, HEIGHT);
     }
 
-    // Game logic
     private void addScore(int points) {
         score += points;
         checkExtraLife(points);
@@ -436,7 +543,6 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void resetAfterDeath() {
-        // Оставляем только один мяч
         balls.clear();
         Ball ball = new Ball(
                 paddle.getX() + paddle.getWidth() / 2 - Ball.DEFAULT_SIZE / 2,
@@ -487,13 +593,11 @@ public class GamePanel extends JPanel implements KeyListener {
                 }
             }
             case EXTRA_BALL -> {
-                // Создаем новый мяч со случайным направлением
                 Ball newBall = new Ball(
                         paddle.getX() + paddle.getWidth() / 2 - Ball.DEFAULT_SIZE / 2,
                         paddle.getY() - Ball.DEFAULT_SIZE,
                         0, -375
                 );
-                // Добавляем небольшой случайный угол
                 newBall.setSpeedX((random.nextBoolean() ? 1 : -1) * random.nextInt(100));
                 balls.add(newBall);
             }
@@ -503,13 +607,10 @@ public class GamePanel extends JPanel implements KeyListener {
                 timeSlowActive = true;
                 timeSlowRemaining = slowDuration;
 
-                // Применяем замедление ко всем мячам
                 balls.forEach(ball -> ball.setSpeedMultiplier(slowFactor));
 
-                // Устанавливаем синий фон
                 currentBackground = new Color(70, 70, 255, 50);
 
-                // Таймер возврата к нормальной скорости
                 Timer restoreTimer = new Timer(slowDuration, e -> {
                     balls.forEach(ball -> {
                         if (ball.getSpeedMultiplier() == slowFactor) {
@@ -523,7 +624,6 @@ public class GamePanel extends JPanel implements KeyListener {
                 restoreTimer.setRepeats(false);
                 restoreTimer.start();
 
-                // Таймер для обновления прогресс-бара
                 new Timer(100, e -> {
                     timeSlowRemaining -= 100;
                     if (timeSlowRemaining <= 0) {
@@ -535,7 +635,6 @@ public class GamePanel extends JPanel implements KeyListener {
             }
             case EXTRA_LIFE -> {
                 lives++;
-                // Эффект получения жизни
                 new Thread(() -> {
                     for (int i = 0; i < 5; i++) {
                         setBackground(i % 2 == 0 ? Color.PINK : Color.BLACK);
