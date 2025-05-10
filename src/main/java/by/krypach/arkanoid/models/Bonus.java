@@ -12,7 +12,7 @@ public class Bonus {
     private int x, y;
     private final BonusType type;
     private boolean active;
-    private float pulseScale = 1.0f;
+    private double pulseScale = 1.0f;
     private boolean pulseGrowing = true;
     private final Color heartColor = new Color(255, 50, 50); // Ярко-красный
 
@@ -106,6 +106,17 @@ public class Bonus {
 
     public Rectangle getBounds() {
         return new Rectangle(x, y, WIDTH, HEIGHT);
+    }
+
+    public boolean checkCollision(Rectangle otherBounds) {
+        if (!active) return false;
+
+        Rectangle bonusBounds = new Rectangle(x, y, WIDTH, HEIGHT);
+        if (bonusBounds.intersects(otherBounds)) {
+            active = false; // Деактивируем бонус при столкновении
+            return true;
+        }
+        return false;
     }
 
     public boolean isActive() {
