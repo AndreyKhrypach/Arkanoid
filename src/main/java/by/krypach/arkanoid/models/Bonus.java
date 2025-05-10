@@ -108,6 +108,17 @@ public class Bonus {
         return new Rectangle(x, y, WIDTH, HEIGHT);
     }
 
+    public boolean checkCollision(Rectangle otherBounds) {
+        if (!active) return false;
+
+        Rectangle bonusBounds = new Rectangle(x, y, WIDTH, HEIGHT);
+        if (bonusBounds.intersects(otherBounds)) {
+            active = false; // Деактивируем бонус при столкновении
+            return true;
+        }
+        return false;
+    }
+
     public boolean isActive() {
         return active;
     }
