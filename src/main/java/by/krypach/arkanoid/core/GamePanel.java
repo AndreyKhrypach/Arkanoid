@@ -1,12 +1,12 @@
 package by.krypach.arkanoid.core;
 
-import by.krypach.arkanoid.enums.BonusType;
 import by.krypach.arkanoid.game.Level;
 import by.krypach.arkanoid.game.LevelGenerator;
 import by.krypach.arkanoid.models.Ball;
-import by.krypach.arkanoid.models.Bonus;
 import by.krypach.arkanoid.models.Brick;
 import by.krypach.arkanoid.models.Paddle;
+import by.krypach.arkanoid.service.BonusManager;
+import by.krypach.arkanoid.service.RenderSystem;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -18,8 +18,8 @@ import java.util.Random;
 
 public class GamePanel extends JPanel implements KeyListener {
     // Game constants
-    private static final int WIDTH = 800;
-    private static final int HEIGHT = 600;
+    public static final int WIDTH = 800;
+    public static final int HEIGHT = 600;
     private static final int EXTRA_LIFE_SCORE = 100;
     private static final int INITIAL_LIVES = 3;
     private static final int PADDLE_INITIAL_WIDTH = 100;
@@ -49,8 +49,9 @@ public class GamePanel extends JPanel implements KeyListener {
 
     // models
     private final Paddle paddle;
+    private final BonusManager bonusManager;
+    private final RenderSystem renderSystem;
     private final List<Brick> bricks = new ArrayList<>();
-    private final List<Bonus> bonuses = new ArrayList<>();
     private final List<Ball> balls = new ArrayList<>();
 
     // Input
@@ -66,6 +67,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private final Random random = new Random();
 
     public GamePanel() {
+        this.bonusManager = new BonusManager(this); // 20% шанс выпадения
         this.levelGenerator = new LevelGenerator();
         this.balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 0, 0));
         this.paddle = new Paddle(
@@ -80,6 +82,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setBackground(Color.BLACK);
         setupInput();
         loadLevel(currentLevelNumber);
+        this.renderSystem = new RenderSystem(this);
 
         startGameLoop();
     }
@@ -87,11 +90,13 @@ public class GamePanel extends JPanel implements KeyListener {
     public void update(double deltaTime) {
         if (!isRunning || isPaused) return;
 
-        updateBonuses(deltaTime);
+        checkCollisions();
+
+        bonusManager.update(deltaTime);
+        bonusManager.checkCollisions(paddle, balls);
         checkBallsLoss();
         updatePaddle(deltaTime);
         updateBalls(deltaTime);
-        checkCollisions();
         checkWinCondition();
     }
 
@@ -127,16 +132,34 @@ public class GamePanel extends JPanel implements KeyListener {
     public void keyTyped(KeyEvent e) {
     }
 
+    public void setTimeSlowActive(boolean active) {
+        this.timeSlowActive = active;
+    }
+
+    public void setTimeSlowRemaining(float remaining) {
+        this.timeSlowRemaining = remaining;
+    }
+
+    public void setCurrentBackground(Color color) {
+        this.currentBackground = color;
+        setBackground(color);
+    }
+
+    public void setLives(int lives) {
+        this.lives = lives;
+    }
+
+    public void handleExtraLife() {
+        lives++;
+        animateLifeGain();
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
-        setBackground(currentBackground);
         super.paintComponent(g);
-
-        drawHUD(g);
-        drawGameState(g);
-        drawModels(g);
-        drawBorders(g);
+        renderSystem.render(g);
     }
+
 
     private void setupInput() {
         addKeyListener(this);
@@ -172,8 +195,8 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void loadLevel(int levelNumber) {
-        bonuses.clear();
-        levelCompleted = false; // Явный сброс флага
+        bonusManager.clear();
+        levelCompleted = false;
         levelTransitionInProgress = false;
 
         boolean wasStuck = !balls.isEmpty() && balls.get(0).isStuckToPaddle();
@@ -188,12 +211,7 @@ public class GamePanel extends JPanel implements KeyListener {
         );
 
         this.bricks.clear();
-        this.bricks.addAll(currentLevel.getBricks());
-
-        // Сбрасываем состояние всех кирпичей
-        for (Brick brick : bricks) {
-            brick.reset();
-        }
+        this.bricks.addAll(currentLevel.getBricks()); // Remove initBricks() call
 
         resetAfterLevelStart(wasStuck, speedX, speedY);
     }
@@ -221,29 +239,32 @@ public class GamePanel extends JPanel implements KeyListener {
         return ball;
     }
 
-    private void updateBonuses(double deltaTime) {
-        bonuses.removeIf(bonus -> {
-            bonus.update(deltaTime);
-            if (bonus.getY() > HEIGHT) return true;
-            if (bonus.getBounds().intersects(paddle.getBounds())) {
-                applyBonus(bonus.getType());
-                return true;
-            }
-            return false;
-        });
-    }
-
     private void checkBallsLoss() {
-        Iterator<Ball> iterator = balls.iterator();
-        while (iterator.hasNext()) {
-            Ball ball = iterator.next();
-            if (ball.getY() >= HEIGHT) {
-                iterator.remove();
-            }
-        }
+        List<Ball> ballsCopy = new ArrayList<>(balls);
+        List<Brick> bricksCopy = new ArrayList<>(bricks);
 
-        if (balls.isEmpty()) {
-            loseLife();
+        Iterator<Ball> ballIterator = ballsCopy.iterator();
+        while (ballIterator.hasNext()) {
+            Ball ball = ballIterator.next();
+
+            if (ball.getY() > HEIGHT) {
+                balls.remove(ball); // Safe because we're not iterating over the original
+                if (balls.isEmpty()) {
+                    loseLife();
+                }
+                continue;
+            }
+
+            for (Brick brick : bricksCopy) {
+                if (brick.isAlive() && ball.getBounds().intersects(brick.getBounds())) {
+                    handleBrickCollision(ball, brick);
+                    if (brick.hit()) {
+                        bonusManager.spawnFromBrick(brick);
+                        addScore(brick.getRow() * brick.getMaxHits());
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -270,7 +291,6 @@ public class GamePanel extends JPanel implements KeyListener {
     private void checkCollisions() {
         checkWallCollisions();
         checkPaddleCollision();
-        checkBrickCollisions();
     }
 
     private void checkWallCollisions() {
@@ -319,19 +339,10 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void checkBrickCollisions() {
-        for (Ball ball : balls) {
-            Iterator<Brick> iterator = bricks.iterator();
-            while (iterator.hasNext()) {
-                Brick brick = iterator.next();
-                if (brick.isAlive() && ball.getBounds().intersects(brick.getBounds())) {
-                    handleBrickCollision(ball, brick);
-                    boolean wasDestroyed = brick.hit();
-                    spawnBonus(brick);
-                    addScore(brick.getRow() * brick.getMaxHits());
-
-                    if (wasDestroyed) {
-                        iterator.remove();
-                    }
+        for (Brick brick : bricks) {
+            if (brick.isAlive() /* проверка коллизии */) {
+                if (brick.hit()) {
+                    bonusManager.spawnFromBrick(brick); // Генерация бонуса
                 }
             }
         }
@@ -356,28 +367,6 @@ public class GamePanel extends JPanel implements KeyListener {
                 ball.setX(brickRect.x + brickRect.width);
             }
             ball.reverseX();
-        }
-    }
-
-    private void spawnBonus(Brick brick) {
-        BonusType type;
-        double dropChance = 0.3;
-
-        switch(brick.getRow()) {
-            case 1: type = BonusType.PADDLE_EXTEND; break;
-            case 2: type = BonusType.BALL_SPEED_UP; break;
-            case 3: type = BonusType.EXTRA_BALL; break;
-            case 4: type = BonusType.TIME_SLOW; break;
-            case 5: type = BonusType.EXTRA_LIFE; break;
-            default: return;
-        }
-
-        if (random.nextDouble() < dropChance) {
-            bonuses.add(new Bonus(
-                    brick.getX() + brick.getWidth() / 2 - Bonus.WIDTH / 2,
-                    brick.getY(),
-                    type
-            ));
         }
     }
 
@@ -409,10 +398,11 @@ public class GamePanel extends JPanel implements KeyListener {
                 loadLevel(currentLevelNumber);
             } else {
                 gameComplete();
-                ((Timer)e.getSource()).stop();
+                drawCenteredText(getGraphics(), "ПОБЕДА! Финальный счет: " + score, 40, HEIGHT/2);
             }
             isPaused = false;
             levelTransitionInProgress = false;
+            ((Timer)e.getSource()).stop();
         });
         transitionTimer.setRepeats(false);
         transitionTimer.start();
@@ -422,7 +412,7 @@ public class GamePanel extends JPanel implements KeyListener {
         isRunning = false;
         levelCompleted = true;
         balls.clear();
-        bonuses.clear();
+        bonusManager.clear();
 
         drawCenteredText(getGraphics(), "ИГРА ЗАВЕРШЕНА! Финальный счет: " + score, 30, HEIGHT/2);
         repaint();
@@ -489,7 +479,7 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private void drawModels(Graphics g) {
         if (isRunning) {
-            bonuses.forEach(bonus -> bonus.draw(g));
+            bonusManager.getActiveBonuses().forEach(bonus -> bonus.draw(g));
             balls.forEach(ball -> ball.draw(g)); // Рисуем все мячи
             paddle.draw(g);
             bricks.forEach(brick -> brick.draw(g));
@@ -559,91 +549,22 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private int determineHitsRequired(int row, Random random) {
         double chance = random.nextDouble();
-        switch (row) {
-            case 0:
-                return chance < 0.6 ? 1 : chance < 0.85 ? 2 : chance < 0.95 ? 3 : 4;
-            case 1:
-                return chance < 0.4 ? 1 : chance < 0.7 ? 2 : chance < 0.9 ? 3 : 4;
-            case 2:
-                return chance < 0.2 ? 1 : chance < 0.5 ? 2 : chance < 0.8 ? 3 : chance < 0.95 ? 4 : 5;
-            case 3:
-                return chance < 0.1 ? 1 : chance < 0.3 ? 2 : chance < 0.6 ? 3 : chance < 0.85 ? 4 : 5;
-            case 4:
-                return chance < 0.05 ? 1 : chance < 0.15 ? 2 : chance < 0.35 ? 3 : chance < 0.65 ? 4 : 5;
-            default:
-                return 1;
-        }
+        return switch (row) {
+            case 0 -> chance < 0.6 ? 1 : chance < 0.85 ? 2 : chance < 0.95 ? 3 : 4;
+            case 1 -> chance < 0.4 ? 1 : chance < 0.7 ? 2 : chance < 0.9 ? 3 : 4;
+            case 2 -> chance < 0.2 ? 1 : chance < 0.5 ? 2 : chance < 0.8 ? 3 : chance < 0.95 ? 4 : 5;
+            case 3 -> chance < 0.1 ? 1 : chance < 0.3 ? 2 : chance < 0.6 ? 3 : chance < 0.85 ? 4 : 5;
+            case 4 -> chance < 0.05 ? 1 : chance < 0.15 ? 2 : chance < 0.35 ? 3 : chance < 0.65 ? 4 : 5;
+            default -> 1;
+        };
     }
 
-    private void applyBonus(BonusType type) {
-        switch (type) {
-            case PADDLE_EXTEND -> {
-                int newWidth = Math.min(paddle.getWidth() + 20, PADDLE_MAX_WIDTH);
-                if (newWidth > paddle.getWidth()) {
-                    paddle.setWidth(newWidth);
-                }
-            }
-            case BALL_SPEED_UP -> {
-                double targetMultiplier = Ball.SPEED_BOOST;
-                for (Ball ball : balls) {
-                    if (ball.getSpeedMultiplier() < targetMultiplier) {
-                        ball.setSpeedMultiplier(targetMultiplier);
-                        ball.setColor(new Color(255, 165, 0));
-                    }
-                }
-            }
-            case EXTRA_BALL -> {
-                Ball newBall = new Ball(
-                        paddle.getX() + paddle.getWidth() / 2 - Ball.DEFAULT_SIZE / 2,
-                        paddle.getY() - Ball.DEFAULT_SIZE,
-                        0, -375
-                );
-                newBall.setSpeedX((random.nextBoolean() ? 1 : -1) * random.nextInt(100));
-                balls.add(newBall);
-            }
-            case TIME_SLOW -> {
-                final float slowFactor = 0.4f;
-                final int slowDuration = 15000;
-                timeSlowActive = true;
-                timeSlowRemaining = slowDuration;
-
-                balls.forEach(ball -> ball.setSpeedMultiplier(slowFactor));
-
-                currentBackground = new Color(70, 70, 255, 50);
-
-                Timer restoreTimer = new Timer(slowDuration, e -> {
-                    balls.forEach(ball -> {
-                        if (ball.getSpeedMultiplier() == slowFactor) {
-                            ball.setSpeedMultiplier(1.0f);
-                        }
-                    });
-                    currentBackground = Color.BLACK;
-                    timeSlowActive = false;
-                    repaint();
-                });
-                restoreTimer.setRepeats(false);
-                restoreTimer.start();
-
-                new Timer(100, e -> {
-                    timeSlowRemaining -= 100;
-                    if (timeSlowRemaining <= 0) {
-                        ((Timer)e.getSource()).stop();
-                    }
-                    repaint();
-                }).start();
-
-            }
-            case EXTRA_LIFE -> {
-                lives++;
-                new Thread(() -> {
-                    for (int i = 0; i < 5; i++) {
-                        setBackground(i % 2 == 0 ? Color.PINK : Color.BLACK);
-                        try { Thread.sleep(150); }
-                        catch (InterruptedException ignored) {}
-                    }
-                    setBackground(Color.BLACK);
-                }).start();
-            }
-        }
-    }
+    public Paddle getPaddle() { return paddle; }
+    public List<Ball> getBalls() { return balls; }
+    public List<Brick> getBricks() { return bricks; }
+    public BonusManager getBonusManager() { return bonusManager; }
+    public Color getCurrentBackground() { return currentBackground; }
+    public int getCurrentLevelNumber() { return currentLevelNumber; }
+    public int getLives() { return lives; }
+    public int getScore() { return score; }
 }

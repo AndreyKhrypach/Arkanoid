@@ -3,6 +3,7 @@ package by.krypach.arkanoid.models;
 import java.awt.*;
 
 public class Paddle {
+    public static final int MAX_WIDTH = 200;
     private static final int GAME_WIDTH = 800;
     private static final float ACCELERATION = 2.5f;
     private static final float DECELERATION = 1.8f;
