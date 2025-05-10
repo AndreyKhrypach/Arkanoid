@@ -12,7 +12,7 @@ public class Bonus {
     private int x, y;
     private final BonusType type;
     private boolean active;
-    private float pulseScale = 1.0f;
+    private double pulseScale = 1.0f;
     private boolean pulseGrowing = true;
     private final Color heartColor = new Color(255, 50, 50); // Ярко-красный
 

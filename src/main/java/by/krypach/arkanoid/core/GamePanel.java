@@ -549,20 +549,14 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private int determineHitsRequired(int row, Random random) {
         double chance = random.nextDouble();
-        switch (row) {
-            case 0:
-                return chance < 0.6 ? 1 : chance < 0.85 ? 2 : chance < 0.95 ? 3 : 4;
-            case 1:
-                return chance < 0.4 ? 1 : chance < 0.7 ? 2 : chance < 0.9 ? 3 : 4;
-            case 2:
-                return chance < 0.2 ? 1 : chance < 0.5 ? 2 : chance < 0.8 ? 3 : chance < 0.95 ? 4 : 5;
-            case 3:
-                return chance < 0.1 ? 1 : chance < 0.3 ? 2 : chance < 0.6 ? 3 : chance < 0.85 ? 4 : 5;
-            case 4:
-                return chance < 0.05 ? 1 : chance < 0.15 ? 2 : chance < 0.35 ? 3 : chance < 0.65 ? 4 : 5;
-            default:
-                return 1;
-        }
+        return switch (row) {
+            case 0 -> chance < 0.6 ? 1 : chance < 0.85 ? 2 : chance < 0.95 ? 3 : 4;
+            case 1 -> chance < 0.4 ? 1 : chance < 0.7 ? 2 : chance < 0.9 ? 3 : 4;
+            case 2 -> chance < 0.2 ? 1 : chance < 0.5 ? 2 : chance < 0.8 ? 3 : chance < 0.95 ? 4 : 5;
+            case 3 -> chance < 0.1 ? 1 : chance < 0.3 ? 2 : chance < 0.6 ? 3 : chance < 0.85 ? 4 : 5;
+            case 4 -> chance < 0.05 ? 1 : chance < 0.15 ? 2 : chance < 0.35 ? 3 : chance < 0.65 ? 4 : 5;
+            default -> 1;
+        };
     }
 
     public Paddle getPaddle() { return paddle; }
