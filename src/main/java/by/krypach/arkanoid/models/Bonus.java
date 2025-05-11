@@ -25,14 +25,6 @@ public class Bonus {
 
     public void update(double deltaTime) {
         y += (int)(SPEED * deltaTime);
-
-        // Анимация пульсации только для EXTRA_LIFE
-        if (type == BonusType.EXTRA_LIFE) {
-            pulseScale += (pulseGrowing ? 0.05f : -0.05f) * deltaTime * 60;
-
-            if (pulseScale > 1.2f) pulseGrowing = false;
-            if (pulseScale < 0.8f) pulseGrowing = true;
-        }
     }
 
     public void draw(Graphics g) {
@@ -123,12 +115,28 @@ public class Bonus {
         return type;
     }
 
-    public int getX() {
-        return x;
-    }
-
     public int getY() {
         return y;
+    }
+
+    public double getPulseScale() {
+        return pulseScale;
+    }
+
+    public void setPulseScale(double pulseScale) {
+        this.pulseScale = pulseScale;
+    }
+
+    public boolean isPulseGrowing() {
+        return pulseGrowing;
+    }
+
+    public void setPulseGrowing(boolean pulseGrowing) {
+        this.pulseGrowing = pulseGrowing;
+    }
+
+    public Color getHeartColor() {
+        return heartColor;
     }
 }
 

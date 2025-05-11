@@ -32,12 +32,12 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean isRunning = true;
     private boolean isPaused = false;
     private boolean timeSlowActive = false;
-    private float timeSlowRemaining = 0;
-    private Color currentBackground = Color.BLACK;
-    private int currentLevelNumber = 1;
+    private double timeSlowRemaining = 0;
     private Level currentLevel;
     private boolean levelCompleted = false;
     private boolean levelTransitionInProgress = false;
+    private boolean lifeAnimationActive = false;
+    private Color lifeAnimationColor = Color.BLACK;
 
     // models
     private final Paddle paddle;
@@ -74,7 +74,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(currentLevelNumber);
+        loadLevel(1);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem();
         startGameLoop();
@@ -83,10 +83,13 @@ public class GamePanel extends JPanel implements KeyListener {
     public void update(double deltaTime) {
         if (!isRunning || isPaused) return;
 
-        checkCollisions();
+        if (currentLevel.hasBonuses()) {
+            bonusManager.timeSlowEffect(deltaTime);
+            bonusManager.update(deltaTime);
+            bonusManager.checkCollisions(paddle, balls);
+        }
 
-        bonusManager.update(deltaTime);
-        bonusManager.checkCollisions(paddle, balls);
+        checkCollisions();
         checkBallsLoss();
         updatePaddle(deltaTime);
         updateBalls(deltaTime);
@@ -125,6 +128,21 @@ public class GamePanel extends JPanel implements KeyListener {
     public void keyTyped(KeyEvent e) {
     }
 
+    public void animateLifeGain() {
+        lifeAnimationActive = true;
+        new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                lifeAnimationColor = (i % 2 == 0 ? Color.GREEN : Color.BLACK);
+                try {
+                    Thread.sleep(150);
+                } catch (InterruptedException ignored) {
+                }
+            }
+            lifeAnimationColor = Color.BLACK;
+            lifeAnimationActive = false;
+        }).start();
+    }
+
     public void setTimeSlowActive(boolean active) {
         this.timeSlowActive = active;
     }
@@ -133,13 +151,55 @@ public class GamePanel extends JPanel implements KeyListener {
         this.timeSlowRemaining = remaining;
     }
 
-    public void setCurrentBackground(Color color) {
-        this.currentBackground = color;
-        setBackground(color);
-    }
-
     public void setLives(int lives) {
         this.lives = lives;
+    }
+    public Paddle getPaddle() { return paddle; }
+    public List<Ball> getBalls() { return balls; }
+    public List<Brick> getBricks() { return bricks; }
+    public BonusManager getBonusManager() { return bonusManager; }
+    public int getCurrentLevelNumber() { return currentLevel.getLevelNumber(); }
+    public int getLives() { return lives; }
+    public int getScore() { return score; }
+
+    public boolean isLifeAnimationActive() {
+        return lifeAnimationActive;
+    }
+
+    public Color getLifeAnimationColor() {
+        return lifeAnimationColor;
+    }
+
+    public Level getCurrentLevel() {
+        return currentLevel;
+    }
+
+    public boolean isPaused() {
+        return isPaused;
+    }
+
+    public boolean isLevelCompleted() {
+        return levelCompleted;
+    }
+
+    public int getDeathAnimationCounter() {
+        return deathAnimationCounter;
+    }
+
+    public void setDeathAnimationCounter(int deathAnimationCounter) {
+        this.deathAnimationCounter = deathAnimationCounter;
+    }
+
+    public boolean isRunning() {
+        return isRunning;
+    }
+
+    public boolean isTimeSlowActive() {
+        return timeSlowActive;
+    }
+
+    public double getTimeSlowRemaining() {
+        return timeSlowRemaining;
     }
 
     @Override
@@ -147,7 +207,6 @@ public class GamePanel extends JPanel implements KeyListener {
         super.paintComponent(g);
         renderSystem.render(g);
     }
-
 
     private void setupInput() {
         addKeyListener(this);
@@ -170,10 +229,7 @@ public class GamePanel extends JPanel implements KeyListener {
         levelCompleted = false;
         levelTransitionInProgress = false;
 
-        boolean wasStuck = !balls.isEmpty() && balls.get(0).isStuckToPaddle();
-        double speedX = balls.isEmpty() ? 0 : balls.get(0).getSpeedX();
-        double speedY = balls.isEmpty() ? 0 : balls.get(0).getSpeedY();
-
+        // Удаляем сохранение предыдущего состояния мяча
         this.currentLevel = levelGenerator.generateLevel(
                 levelNumber,
                 5, // rows
@@ -182,18 +238,16 @@ public class GamePanel extends JPanel implements KeyListener {
         );
 
         this.bricks.clear();
-        this.bricks.addAll(currentLevel.getBricks()); // Remove initBricks() call
-
-        resetAfterLevelStart(wasStuck, speedX, speedY);
+        this.bricks.addAll(currentLevel.getBricks());
+        setBackground(currentLevel.getBackgroundColor());
+        // Всегда сбрасываем мяч в начальное состояние
+        resetAfterLevelStart();
     }
 
-    private void resetAfterLevelStart(boolean keepStuck, double speedX, double speedY) {
+    private void resetAfterLevelStart() {
         balls.clear();
         Ball newBall = createNewBall();
-        newBall.setStuckToPaddle(keepStuck);
-        if (!keepStuck) {
-            newBall.setSpeed(speedX, speedY);
-        }
+        newBall.setStuckToPaddle(true); // Всегда прилипает при новом уровне
         balls.add(newBall);
 
         paddle.setWidth(initialPaddleWidth);
@@ -211,6 +265,8 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void checkBallsLoss() {
+        if (levelTransitionInProgress) return;
+
         List<Ball> ballsCopy = new ArrayList<>(balls);
         List<Brick> bricksCopy = new ArrayList<>(bricks);
 
@@ -230,13 +286,19 @@ public class GamePanel extends JPanel implements KeyListener {
                 if (brick.isAlive() && ball.getBounds().intersects(brick.getBounds())) {
                     collisionSystem.handleBrickCollision(ball, brick);
                     if (brick.hit()) {
-                        bonusManager.spawnFromBrick(brick);
-                        addScore(brick.getRow() * brick.getMaxHits());
+                        if (currentLevel.hasBonuses()) { // Добавляем проверку
+                            bonusManager.spawnFromBrick(brick);
+                        }
+                        addScore(calculateScoreForBrick(brick) * brick.getMaxHits());
                     }
                     break;
                 }
             }
         }
+    }
+
+    private int calculateScoreForBrick(Brick brick) {
+        return 6 - brick.getRow(); // Обратный порядок: 1 строка -> 5 очков, 5 строка -> 1 очко
     }
 
     private void updatePaddle(double deltaTime) {
@@ -267,15 +329,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private void checkWinCondition() {
         if (levelCompleted || levelTransitionInProgress || !isRunning) return;
 
-        boolean allDestroyed = true;
-        for (Brick brick : bricks) {
-            if (brick.isAlive()) {
-                allDestroyed = false;
-                break;
-            }
-        }
-
-        if (allDestroyed) {
+        if (currentLevel.isCompleted()) {
             levelCompleted = true;
             showLevelComplete();
         }
@@ -287,9 +341,12 @@ public class GamePanel extends JPanel implements KeyListener {
 
         isPaused = true;
         Timer transitionTimer = new Timer(2000, e -> {
-            if (currentLevelNumber < 10) {
-                currentLevelNumber++;
-                loadLevel(currentLevelNumber);
+            // Очищаем все мячи перед загрузкой нового уровня
+            balls.clear();
+
+            if (currentLevel.getLevelNumber() < 10) {
+                currentLevel.setLevelNumber(currentLevel.getLevelNumber() + 1);
+                loadLevel(currentLevel.getLevelNumber());
             } else {
                 gameComplete();
                 renderSystem.drawCenteredText(getGraphics(), "ПОБЕДА! Финальный счет: " + score, 40, HEIGHT/2);
@@ -325,19 +382,6 @@ public class GamePanel extends JPanel implements KeyListener {
         }
     }
 
-    private void animateLifeGain() {
-        new Thread(() -> {
-            for (int i = 0; i < 5; i++) {
-                setBackground(i % 2 == 0 ? Color.GREEN : Color.BLACK);
-                try {
-                    Thread.sleep(150);
-                } catch (InterruptedException ignored) {
-                }
-            }
-            setBackground(Color.BLACK);
-        }).start();
-    }
-
     private void loseLife() {
         lives--;
         deathAnimationCounter = 10;
@@ -363,42 +407,5 @@ public class GamePanel extends JPanel implements KeyListener {
         paddle.setWidth(initialPaddleWidth);
         paddle.setPreciseX(WIDTH / 2.0 - initialPaddleWidth / 2.0);
         paddle.setCurrentSpeed(0);
-    }
-
-    public Paddle getPaddle() { return paddle; }
-    public List<Ball> getBalls() { return balls; }
-    public List<Brick> getBricks() { return bricks; }
-    public BonusManager getBonusManager() { return bonusManager; }
-    public Color getCurrentBackground() { return currentBackground; }
-    public int getCurrentLevelNumber() { return currentLevelNumber; }
-    public int getLives() { return lives; }
-    public int getScore() { return score; }
-
-    public boolean isPaused() {
-        return isPaused;
-    }
-
-    public boolean isLevelCompleted() {
-        return levelCompleted;
-    }
-
-    public int getDeathAnimationCounter() {
-        return deathAnimationCounter;
-    }
-
-    public void setDeathAnimationCounter(int deathAnimationCounter) {
-        this.deathAnimationCounter = deathAnimationCounter;
-    }
-
-    public boolean isRunning() {
-        return isRunning;
-    }
-
-    public boolean isTimeSlowActive() {
-        return timeSlowActive;
-    }
-
-    public float getTimeSlowRemaining() {
-        return timeSlowRemaining;
     }
 }
