@@ -76,7 +76,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setupInput();
         loadLevel(1);
         this.renderSystem = new RenderSystem(this);
-        this.collisionSystem = new CollisionSystem();
+        this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
     }
 
@@ -141,6 +141,15 @@ public class GamePanel extends JPanel implements KeyListener {
             lifeAnimationColor = Color.BLACK;
             lifeAnimationActive = false;
         }).start();
+    }
+
+    public void addScore(int points) {
+        score += points;
+        checkExtraLife(points);
+    }
+
+    public int calculateScoreForBrick(Brick brick) {
+        return 6 - brick.getRow(); // Обратный порядок: 1 строка -> 5 очков, 5 строка -> 1 очко
     }
 
     public void setTimeSlowActive(boolean active) {
@@ -229,18 +238,27 @@ public class GamePanel extends JPanel implements KeyListener {
         levelCompleted = false;
         levelTransitionInProgress = false;
 
-        // Удаляем сохранение предыдущего состояния мяча
-        this.currentLevel = levelGenerator.generateLevel(
-                levelNumber,
-                5, // rows
-                10, // cols
-                random
-        );
+        switch(levelNumber) {
+            case 1:
+                this.currentLevel = levelGenerator.generateFirstLevel(5, 10);
+                bonusManager.setCurrentDropChance(0);
+                break;
+            case 2:
+                this.currentLevel = levelGenerator.generateLevel(2, 5, 10, random);
+                bonusManager.setCurrentDropChance(0.3);
+                break;
+            case 3:
+                this.currentLevel = levelGenerator.generateLevel3();
+                bonusManager.setCurrentDropChance(0.5);
+                break;
+            default:
+                this.currentLevel = levelGenerator.generateLevel(levelNumber, 5, 10, random);
+                bonusManager.setCurrentDropChance(0.3);
+        }
 
         this.bricks.clear();
         this.bricks.addAll(currentLevel.getBricks());
         setBackground(currentLevel.getBackgroundColor());
-        // Всегда сбрасываем мяч в начальное состояние
         resetAfterLevelStart();
     }
 
@@ -285,20 +303,10 @@ public class GamePanel extends JPanel implements KeyListener {
             for (Brick brick : bricksCopy) {
                 if (brick.isAlive() && ball.getBounds().intersects(brick.getBounds())) {
                     collisionSystem.handleBrickCollision(ball, brick);
-                    if (brick.hit()) {
-                        if (currentLevel.hasBonuses()) { // Добавляем проверку
-                            bonusManager.spawnFromBrick(brick);
-                        }
-                        addScore(calculateScoreForBrick(brick) * brick.getMaxHits());
-                    }
                     break;
                 }
             }
         }
-    }
-
-    private int calculateScoreForBrick(Brick brick) {
-        return 6 - brick.getRow(); // Обратный порядок: 1 строка -> 5 очков, 5 строка -> 1 очко
     }
 
     private void updatePaddle(double deltaTime) {
@@ -367,11 +375,6 @@ public class GamePanel extends JPanel implements KeyListener {
 
         renderSystem.drawCenteredText(getGraphics(), "ИГРА ЗАВЕРШЕНА! Финальный счет: " + score, 30, HEIGHT/2);
         repaint();
-    }
-
-    private void addScore(int points) {
-        score += points;
-        checkExtraLife(points);
     }
 
     private void checkExtraLife(int points) {

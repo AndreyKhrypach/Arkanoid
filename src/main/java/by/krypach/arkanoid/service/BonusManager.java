@@ -16,20 +16,22 @@ public class BonusManager {
 
     private final List<Bonus> activeBonuses = new ArrayList<>();
     private final Random random = new Random();
-    private static final double DROP_CHANCE = 0.3;
+    private double currentDropChance;
     private final GamePanel gamePanel;
 
     public BonusManager(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
+        this.currentDropChance = 0.3;
     }
 
     public void spawnFromBrick(Brick brick) {
-        if (gamePanel.getCurrentLevel().hasBonuses() &&random.nextDouble() < DROP_CHANCE) {
-            BonusType type = determineBonusType(brick.getRow());
+        if (brick.getBonusType() == null) return;
+
+        if (gamePanel.getCurrentLevel().hasBonuses() &&random.nextDouble() < currentDropChance) {
             activeBonuses.add(new Bonus(
                     brick.getX() + brick.getWidth() / 2 - Bonus.WIDTH / 2,
                     brick.getY(),
-                    type
+                    brick.getBonusType()
             ));
         }
     }
@@ -76,6 +78,10 @@ public class BonusManager {
         activeBonuses.clear();
     }
 
+    public void setCurrentDropChance(double currentDropChance) {
+        this.currentDropChance = currentDropChance;
+    }
+
     private void applyBonusEffect(BonusType type, Paddle paddle, List<Ball> balls) {
         switch (type) {
             case PADDLE_EXTEND -> {
@@ -120,17 +126,6 @@ public class BonusManager {
                 gamePanel.animateLifeGain();
             }
         }
-    }
-
-    private BonusType determineBonusType(int brickRow) {
-        return switch (brickRow) {
-            case 1 -> BonusType.PADDLE_EXTEND;
-            case 2 -> BonusType.BALL_SPEED_UP;
-            case 3 -> BonusType.EXTRA_BALL;
-            case 4 -> BonusType.TIME_SLOW;
-            case 5 -> BonusType.EXTRA_LIFE;
-            default -> throw new IllegalStateException("Unexpected row: " + brickRow);
-        };
     }
 
     private void updatePulseAnimation(Bonus bonus, double deltaTime) {

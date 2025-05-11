@@ -59,7 +59,7 @@ public class Paddle {
 
     public void setWidth(int newWidth) {
         double center = this.preciseX + this.width / 2.0;
-        this.width = newWidth;
+        this.width = Math.max(40, newWidth);
         this.maxXPosition = GAME_WIDTH - newWidth;
         this.preciseX = Math.max(0, Math.min(center - newWidth / 2.0, maxXPosition));
     }
