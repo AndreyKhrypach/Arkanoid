@@ -10,8 +10,13 @@ public class Brick {
     private Color color;
     private int maxHits;
     private int currentHits;
-    private final Color[] hitColors;
-
+    private static final Color[] HIT_COLORS = {
+            new Color(255, 182, 193), // 1 удар (розовый)
+            Color.YELLOW,             // 2 удара (желтый)
+            Color.GREEN,              // 3 удара (зеленый)
+            Color.RED,                // 4 удара (красный)
+            new Color(128, 0, 128)    // 5 ударов (фиолетовый)
+    };
 
     public Brick(int x, int y, int width, int height, int row, int maxHits) {
         this.x = x;
@@ -22,16 +27,7 @@ public class Brick {
         this.isDestroyed = false;
         this.maxHits = maxHits;
         this.currentHits = 0;
-
-        this.hitColors = new Color[] {
-                new Color(255, 182, 193), // 1 удар
-                Color.YELLOW,             // 2 удара
-                Color.GREEN,              // 3 удара
-                Color.RED,                // 4 удара
-                new Color(128, 0, 128)    // 5 ударов
-        };
-
-        this.color = hitColors[Math.min(maxHits - 1, hitColors.length - 1)];
+        updateColor();
     }
 
     public void draw(Graphics g) {
@@ -62,6 +58,7 @@ public class Brick {
 
     public boolean hit() {
         currentHits++;
+        updateColor(); // Обновляем цвет после каждого удара
         if (currentHits >= maxHits) {
             isDestroyed = true;
             return true;
@@ -108,5 +105,11 @@ public class Brick {
 
     public void setColor(Color color) {
         this.color = color;
+    }
+
+    private void updateColor() {
+        int hitsLeft = maxHits - currentHits;
+        int colorIndex = Math.max(0, Math.min(hitsLeft - 1, HIT_COLORS.length - 1));
+        this.color = HIT_COLORS[colorIndex];
     }
 }

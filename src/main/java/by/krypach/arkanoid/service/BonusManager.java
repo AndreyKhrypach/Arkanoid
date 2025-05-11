@@ -5,12 +5,15 @@ import by.krypach.arkanoid.models.*;
 import by.krypach.arkanoid.enums.BonusType;
 
 import java.awt.*;
-import javax.swing.Timer;
-import java.awt.event.ActionEvent;
 import java.util.*;
 import java.util.List;
 
 public class BonusManager {
+
+    private static final double PULSE_SPEED = 0.05;
+    private static final double MAX_PULSE = 1.2;
+    private static final double MIN_PULSE = 0.8;
+
     private final List<Bonus> activeBonuses = new ArrayList<>();
     private final Random random = new Random();
     private static final double DROP_CHANCE = 0.3;
@@ -21,7 +24,7 @@ public class BonusManager {
     }
 
     public void spawnFromBrick(Brick brick) {
-        if (random.nextDouble() < DROP_CHANCE) {
+        if (gamePanel.getCurrentLevel().hasBonuses() &&random.nextDouble() < DROP_CHANCE) {
             BonusType type = determineBonusType(brick.getRow());
             activeBonuses.add(new Bonus(
                     brick.getX() + brick.getWidth() / 2 - Bonus.WIDTH / 2,
@@ -32,7 +35,14 @@ public class BonusManager {
     }
 
     public void update(double deltaTime) {
-        activeBonuses.forEach(bonus -> bonus.update(deltaTime));
+        for (Bonus bonus : activeBonuses) {
+            bonus.update(deltaTime);
+
+            // Управление анимацией пульсации для EXTRA_LIFE
+            if (bonus.getType() == BonusType.EXTRA_LIFE) {
+                updatePulseAnimation(bonus, deltaTime);
+            }
+        }
         activeBonuses.removeIf(bonus -> bonus.getY() > GamePanel.HEIGHT);
     }
 
@@ -45,6 +55,25 @@ public class BonusManager {
                 iterator.remove();
             }
         }
+    }
+
+    public void timeSlowEffect(double deltaTime){
+        if (gamePanel.isTimeSlowActive()) {
+            gamePanel.setTimeSlowRemaining((float) (gamePanel.getTimeSlowRemaining() - deltaTime * 1000)); // Уменьшаем на миллисекунды
+            if (gamePanel.getTimeSlowRemaining() <= 0) {
+                gamePanel.setTimeSlowRemaining(0);
+                gamePanel.setTimeSlowActive(false);
+                gamePanel.getBalls().forEach(ball -> ball.setSpeedMultiplier(1.0f));
+            }
+        }
+    }
+
+    public List<Bonus> getActiveBonuses() {
+        return Collections.unmodifiableList(activeBonuses);
+    }
+
+    public void clear() {
+        activeBonuses.clear();
     }
 
     private void applyBonusEffect(BonusType type, Paddle paddle, List<Ball> balls) {
@@ -76,43 +105,21 @@ public class BonusManager {
                 final int slowDuration = 15000;
                 gamePanel.setTimeSlowActive(true);
                 gamePanel.setTimeSlowRemaining(slowDuration);
-                gamePanel.setCurrentBackground(new Color(70, 70, 255, 50));
 
                 balls.forEach(ball -> ball.setSpeedMultiplier(slowFactor));
-
-                Timer timer = new Timer(slowDuration, (ActionEvent e) -> {
-                    balls.forEach(ball -> {
-                        if (ball.getSpeedMultiplier() == slowFactor) {
-                            ball.setSpeedMultiplier(1.0f);
-                        }
-                    });
-                    gamePanel.setCurrentBackground(Color.BLACK);
-                    gamePanel.setTimeSlowActive(false);
-                });
-                timer.setRepeats(false);
-                timer.start();
             }
             case EXTRA_LIFE -> {
                 gamePanel.setLives(gamePanel.getLives() + 1);
-                new Thread(() -> {
-                    for (int i = 0; i < 5; i++) {
-                        gamePanel.setCurrentBackground(i % 2 == 0 ? Color.PINK : Color.BLACK);
-                        try { Thread.sleep(150); }
-                        catch (InterruptedException ignored) {}
-                    }
-                    gamePanel.setCurrentBackground(Color.BLACK);
-                }).start();
+                Color heartColor = getActiveBonuses().stream()
+                        .filter(b -> b.getType() == BonusType.EXTRA_LIFE)
+                        .findFirst()
+                        .map(Bonus::getHeartColor)
+                        .orElse(Color.PINK);
+
+                // Запускаем анимацию через GamePanel
+                gamePanel.animateLifeGain();
             }
         }
-    }
-
-    // Остальные методы без изменений
-    public List<Bonus> getActiveBonuses() {
-        return Collections.unmodifiableList(activeBonuses);
-    }
-
-    public void clear() {
-        activeBonuses.clear();
     }
 
     private BonusType determineBonusType(int brickRow) {
@@ -124,5 +131,20 @@ public class BonusManager {
             case 5 -> BonusType.EXTRA_LIFE;
             default -> throw new IllegalStateException("Unexpected row: " + brickRow);
         };
+    }
+
+    private void updatePulseAnimation(Bonus bonus, double deltaTime) {
+        double newPulse = bonus.getPulseScale() +
+                (bonus.isPulseGrowing() ? PULSE_SPEED : -PULSE_SPEED) * deltaTime * 60;
+
+        if (newPulse > MAX_PULSE) {
+            bonus.setPulseScale(MAX_PULSE);
+            bonus.setPulseGrowing(false);
+        } else if (newPulse < MIN_PULSE) {
+            bonus.setPulseScale(MIN_PULSE);
+            bonus.setPulseGrowing(true);
+        } else {
+            bonus.setPulseScale(newPulse);
+        }
     }
 }
