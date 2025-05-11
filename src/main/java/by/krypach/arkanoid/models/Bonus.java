@@ -119,14 +119,6 @@ public class Bonus {
         return false;
     }
 
-    public boolean isActive() {
-        return active;
-    }
-
-    public void deactivate() {
-        active = false;
-    }
-
     public BonusType getType() {
         return type;
     }

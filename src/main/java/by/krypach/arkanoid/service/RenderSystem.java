@@ -3,7 +3,9 @@ package by.krypach.arkanoid.service;
 import by.krypach.arkanoid.core.GamePanel;
 import by.krypach.arkanoid.models.*;
 import java.awt.*;
-import java.util.List;
+
+import static by.krypach.arkanoid.core.GamePanel.HEIGHT;
+import static by.krypach.arkanoid.core.GamePanel.WIDTH;
 
 public class RenderSystem {
     private final GamePanel gamePanel;
@@ -18,9 +20,16 @@ public class RenderSystem {
         renderUI(g);
     }
 
+    public void drawCenteredText(Graphics g, String text, int fontSize, int y) {
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, fontSize));
+        int width = g.getFontMetrics().stringWidth(text);
+        g.drawString(text, WIDTH / 2 - width / 2, y);
+    }
+
     private void renderBackground(Graphics g) {
         g.setColor(gamePanel.getCurrentBackground());
-        g.fillRect(0, 0, GamePanel.WIDTH, GamePanel.HEIGHT);
+        g.fillRect(0, 0, WIDTH, HEIGHT);
     }
 
     private void renderGameObjects(Graphics g) {
@@ -65,18 +74,58 @@ public class RenderSystem {
 
         String scoreText = "Очки: " + gamePanel.getScore();
         int scoreWidth = g.getFontMetrics().stringWidth(scoreText);
-        g.drawString(scoreText, GamePanel.WIDTH - scoreWidth - 20, 30);
+        g.drawString(scoreText, WIDTH - scoreWidth - 20, 30);
     }
 
+
     private void renderGameState(Graphics g) {
-        // ... (переносим всю логику отрисовки состояний из GamePanel)
+        if (gamePanel.isPaused() && gamePanel.isLevelCompleted()) {
+            drawCenteredText(g, "Уровень " + (gamePanel.getCurrentLevelNumber()-1) + " пройден!", 40, HEIGHT/2 - 50);
+            drawCenteredText(g, "Переход на уровень " + gamePanel.getCurrentLevelNumber(), 30, HEIGHT/2 + 20);
+        }
+
+        if (gamePanel.getDeathAnimationCounter() > 0) {
+            g.setColor(new Color(255, 0, 0, 70));
+            g.fillRect(0, 0, WIDTH, HEIGHT);
+            gamePanel.setDeathAnimationCounter(gamePanel.getDeathAnimationCounter() - 1);
+        }
+
+        if (gamePanel.isPaused()) {
+            drawCenteredText(g, "PAUSED", 40, 300);
+        }
+
+        if (gamePanel.isTimeSlowActive()) {
+            // Рисуем полосу прогресса вверху экрана
+            int progressWidth = (int)(WIDTH * (gamePanel.getTimeSlowRemaining() / 15000f));
+            g.setColor(new Color(100, 100, 255, 200));
+            g.fillRect(0, 5, progressWidth, 5);
+        }
+
+        if (!gamePanel.isRunning()) {
+            if (gamePanel.isLevelCompleted() && gamePanel.getCurrentLevelNumber() > 10) {
+                drawCenteredText(g, "ИГРА ЗАВЕРШЕНА!", 40, HEIGHT/2 - 30);
+                drawCenteredText(g, "Финальный счет: " + gamePanel.getScore(), 30, HEIGHT/2 + 20);
+            } else if (gamePanel.getLives() <= 0) {
+                drawGameOver(g);
+            }
+        }
     }
 
     private void renderBorders(Graphics g) {
         g.setColor(Color.YELLOW);
-        g.drawLine(0, 0, GamePanel.WIDTH, 0);
-        g.drawLine(0, GamePanel.HEIGHT - 1, GamePanel.WIDTH, GamePanel.HEIGHT - 1);
-        g.drawLine(0, 0, 0, GamePanel.HEIGHT);
-        g.drawLine(GamePanel.WIDTH - 1, 0, GamePanel.WIDTH - 1, GamePanel.HEIGHT);
+        g.drawLine(0, 0, WIDTH, 0);
+        g.drawLine(0, HEIGHT - 1, WIDTH, HEIGHT - 1);
+        g.drawLine(0, 0, 0, HEIGHT);
+        g.drawLine(WIDTH - 1, 0, WIDTH - 1, HEIGHT);
     }
+
+    private void drawGameOver(Graphics g) {
+        drawCenteredText(g, "GAME OVER", 40, HEIGHT / 2);
+
+        g.setFont(new Font("Arial", Font.PLAIN, 20));
+        String scoreText = "Ваш счёт: " + gamePanel.getScore();
+        int width = g.getFontMetrics().stringWidth(scoreText);
+        g.drawString(scoreText, WIDTH / 2 - width / 2, HEIGHT / 2 + 40);
+    }
+
 }
