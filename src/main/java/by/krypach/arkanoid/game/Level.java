@@ -6,19 +6,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Level {
-    private final int levelNumber;
+    private int levelNumber;
     private final List<Brick> bricks;
     private final boolean hasBonuses;
-    private final Color baseColor;
+    private final Color backgroundColor;
 
-    public Level(int levelNumber, List<Brick> bricks, boolean hasBonuses, Color baseColor) {
+    public Level(int levelNumber, List<Brick> bricks, boolean hasBonuses, Color backgroundColor) {
         this.levelNumber = levelNumber;
-        this.bricks = bricks;
+        this.bricks = new ArrayList<>(bricks); // Защитная копия
         this.hasBonuses = hasBonuses;
-        this.baseColor = baseColor;
+        this.backgroundColor = backgroundColor;
+    }
+
+    // Геттеры для всех полей
+    public int getLevelNumber() {
+        return levelNumber;
+    }
+
+    public void setLevelNumber(int levelNumber) {
+        this.levelNumber = levelNumber;
     }
 
     public List<Brick> getBricks() {
-        return new ArrayList<>(bricks);
+        return new ArrayList<>(bricks); // Возвращаем защитную копию
+    }
+
+    public boolean hasBonuses() {
+        return hasBonuses;
+    }
+
+    public Color getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public boolean isCompleted() {
+        return bricks.stream().noneMatch(Brick::isAlive);
     }
 }

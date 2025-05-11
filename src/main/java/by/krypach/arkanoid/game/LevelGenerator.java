@@ -2,6 +2,7 @@ package by.krypach.arkanoid.game;
 import by.krypach.arkanoid.models.Brick;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -15,65 +16,65 @@ public class LevelGenerator {
 
     public Level generateLevel(int levelNumber, int rows, int cols, Random random) {
         List<Brick> bricks = new ArrayList<>();
-        Color baseColor = getBaseColorForLevel(levelNumber);
+        boolean hasBonuses = levelNumber > 1;
 
+        if (levelNumber == 1) {
+            return generateFirstLevel(rows, cols);
+        }
+
+        // Создаем список всех возможных позиций кирпичей
+        List<Point> positions = new ArrayList<>();
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                positions.add(new Point(col, row));
+            }
+        }
+        Collections.shuffle(positions, random); // Перемешиваем позиции
+
+        // Рассчитываем количество кирпичей каждого типа
+        int totalBricks = rows * cols;
+        int[] brickCounts = {
+                (int) Math.round(totalBricks * 0.40), // 1 удар (40%)
+                (int) Math.round(totalBricks * 0.25), // 2 удара (25%)
+                (int) Math.round(totalBricks * 0.15), // 3 удара (15%)
+                (int) Math.round(totalBricks * 0.10), // 4 удара (10%)
+                (int) Math.round(totalBricks * 0.10)  // 5 ударов (10%)
+        };
+
+        // Распределяем кирпичи по перемешанным позициям
+        int brickType = 0;
+
+        for (Point pos : positions) {
+            int x = pos.x * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
+            int y = pos.y * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
+
+            // Выбираем тип кирпича
+            while (brickType < brickCounts.length && brickCounts[brickType] <= 0) {
+                brickType++;
+            }
+            if (brickType >= brickCounts.length) brickType = brickCounts.length - 1;
+
+            int hitsRequired = brickType + 1;
+            Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, pos.y + 1, hitsRequired);
+            bricks.add(brick);
+
+            brickCounts[brickType]--;
+        }
+
+        return new Level(levelNumber, bricks, hasBonuses, Color.BLACK);
+    }
+
+    private Level generateFirstLevel(int rows, int cols) {
+        List<Brick> bricks = new ArrayList<>();
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
                 int x = col * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
                 int y = row * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
-
-                int hitsRequired = determineHitsRequired(levelNumber, row, random);
-                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row+1, hitsRequired);
-
-                if (levelNumber == 1) {
-                    brick.setColor(new Color(255, 182, 193)); // Розовый для 1 уровня
-                } else {
-                    brick.setColor(getRowColor(row));
-                }
-
+                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, 1);
+                brick.setColor(new Color(255, 182, 193)); // Розовый для 1 уровня
                 bricks.add(brick);
             }
         }
-
-        return new Level(levelNumber, bricks, levelNumber > 1, baseColor);
-    }
-
-    private Color getRowColor(int row) {
-        return switch (row % 7) {
-            case 0 -> new Color(100, 200, 255);  // Голубой
-            case 1 -> new Color(255, 182, 193);  // Розовый
-            case 2 -> new Color(144, 238, 144);  // Зеленый
-            case 3 -> new Color(255, 255, 150);  // Желтый
-            case 4 -> new Color(200, 150, 255);  // Фиолетовый
-            case 5 -> new Color(255, 150, 150);  // Красный
-            default -> new Color(150, 150, 255);  // Синий
-        };
-    }
-
-    private int determineHitsRequired(int level, int row, Random random) {
-        if (level == 1) return 1;
-
-        double chance = random.nextDouble();
-        return switch (row) {
-            case 0 -> chance < 0.6 ? 1 : chance < 0.85 ? 2 : chance < 0.95 ? 3 : 4;
-            case 1 -> chance < 0.4 ? 1 : chance < 0.7 ? 2 : chance < 0.9 ? 3 : 4;
-            case 2 -> chance < 0.2 ? 1 : chance < 0.5 ? 2 : chance < 0.8 ? 3 : chance < 0.95 ? 4 : 5;
-            case 3 -> chance < 0.1 ? 1 : chance < 0.3 ? 2 : chance < 0.6 ? 3 : chance < 0.85 ? 4 : 5;
-            case 4 -> chance < 0.05 ? 1 : chance < 0.15 ? 2 : chance < 0.35 ? 3 : chance < 0.65 ? 4 : 5;
-            default -> 1;
-        };
-    }
-
-    private Color getBaseColorForLevel(int level) {
-        Color[] colors = {
-                new Color(100, 200, 255),  // Голубой
-                new Color(255, 182, 193),  // Розовый
-                new Color(144, 238, 144),  // Светло-зеленый
-                new Color(255, 255, 150),  // Желтый
-                new Color(200, 150, 255),  // Фиолетовый
-                new Color(255, 150, 150),  // Красный
-                new Color(150, 150, 255)   // Синий
-        };
-        return colors[level % colors.length];
+        return new Level(1, bricks, false, Color.BLACK);
     }
 }

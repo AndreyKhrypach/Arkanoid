@@ -2,6 +2,7 @@ package by.krypach.arkanoid.service;
 
 import by.krypach.arkanoid.core.GamePanel;
 import by.krypach.arkanoid.models.*;
+
 import java.awt.*;
 
 import static by.krypach.arkanoid.core.GamePanel.HEIGHT;
@@ -28,7 +29,13 @@ public class RenderSystem {
     }
 
     private void renderBackground(Graphics g) {
-        g.setColor(gamePanel.getCurrentBackground());
+        if (gamePanel.isLifeAnimationActive()) {
+            g.setColor(gamePanel.getLifeAnimationColor());
+        } else if (gamePanel.isTimeSlowActive()) {
+            g.setColor(new Color(70, 70, 255, 50));
+        } else {
+            g.setColor(gamePanel.getCurrentLevel().getBackgroundColor());
+        }
         g.fillRect(0, 0, WIDTH, HEIGHT);
     }
 
@@ -80,8 +87,8 @@ public class RenderSystem {
 
     private void renderGameState(Graphics g) {
         if (gamePanel.isPaused() && gamePanel.isLevelCompleted()) {
-            drawCenteredText(g, "Уровень " + (gamePanel.getCurrentLevelNumber()-1) + " пройден!", 40, HEIGHT/2 - 50);
-            drawCenteredText(g, "Переход на уровень " + gamePanel.getCurrentLevelNumber(), 30, HEIGHT/2 + 20);
+            drawCenteredText(g, "Уровень " + (gamePanel.getCurrentLevelNumber() - 1) + " пройден!", 40, HEIGHT / 2 - 50);
+            drawCenteredText(g, "Переход на уровень " + gamePanel.getCurrentLevelNumber(), 30, HEIGHT / 2 + 20);
         }
 
         if (gamePanel.getDeathAnimationCounter() > 0) {
@@ -96,15 +103,20 @@ public class RenderSystem {
 
         if (gamePanel.isTimeSlowActive()) {
             // Рисуем полосу прогресса вверху экрана
-            int progressWidth = (int)(WIDTH * (gamePanel.getTimeSlowRemaining() / 15000f));
+            int progressWidth = (int) (WIDTH * (gamePanel.getTimeSlowRemaining() / 15000f));
             g.setColor(new Color(100, 100, 255, 200));
             g.fillRect(0, 5, progressWidth, 5);
+
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.PLAIN, 12));
+            String timeText = String.format("%.1f", gamePanel.getTimeSlowRemaining() / 1000f);
+            g.drawString(timeText + "s", progressWidth + 5, 15);
         }
 
         if (!gamePanel.isRunning()) {
             if (gamePanel.isLevelCompleted() && gamePanel.getCurrentLevelNumber() > 10) {
-                drawCenteredText(g, "ИГРА ЗАВЕРШЕНА!", 40, HEIGHT/2 - 30);
-                drawCenteredText(g, "Финальный счет: " + gamePanel.getScore(), 30, HEIGHT/2 + 20);
+                drawCenteredText(g, "ИГРА ЗАВЕРШЕНА!", 40, HEIGHT / 2 - 30);
+                drawCenteredText(g, "Финальный счет: " + gamePanel.getScore(), 30, HEIGHT / 2 + 20);
             } else if (gamePanel.getLives() <= 0) {
                 drawGameOver(g);
             }
