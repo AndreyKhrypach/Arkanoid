@@ -49,8 +49,15 @@ public class RenderSystem {
 
     private void renderBricks(Graphics g) {
         for (Brick brick : gamePanel.getBricks()) {
-            if (!brick.isDestroyed()) { // Changed from isAlive() to isDestroyed()
+            if (!brick.isDestroyed()) {
                 brick.draw(g);
+
+                // Рисуем маркер ловушки
+                if (brick.getBonusType() != null && brick.getBonusType().isTrap()) {
+                    g.setColor(brick.getBonusType().getColor());
+                    g.drawRect(brick.getX() + 5, brick.getY() + 5,
+                            brick.getWidth() - 10, brick.getHeight() - 10);
+                }
             }
         }
     }
@@ -87,8 +94,8 @@ public class RenderSystem {
 
     private void renderGameState(Graphics g) {
         if (gamePanel.isPaused() && gamePanel.isLevelCompleted()) {
-            drawCenteredText(g, "Уровень " + (gamePanel.getCurrentLevelNumber() - 1) + " пройден!", 40, HEIGHT / 2 - 50);
-            drawCenteredText(g, "Переход на уровень " + gamePanel.getCurrentLevelNumber(), 30, HEIGHT / 2 + 20);
+            drawCenteredText(g, "Уровень " + (gamePanel.getCurrentLevelNumber()) + " пройден!", 40, HEIGHT / 2 - 50);
+            drawCenteredText(g, "Переход на уровень " + (gamePanel.getCurrentLevelNumber() + 1), 30, HEIGHT / 2 + 20);
         }
 
         if (gamePanel.getDeathAnimationCounter() > 0) {
