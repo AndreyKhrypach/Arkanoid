@@ -1,5 +1,7 @@
 package by.krypach.arkanoid.models;
 
+import by.krypach.arkanoid.enums.BonusType;
+
 import java.awt.*;
 
 public class Brick {
@@ -10,6 +12,8 @@ public class Brick {
     private Color color;
     private int maxHits;
     private int currentHits;
+    private BonusType bonusType;
+
     private static final Color[] HIT_COLORS = {
             new Color(255, 182, 193), // 1 удар (розовый)
             Color.YELLOW,             // 2 удара (желтый)
@@ -57,8 +61,8 @@ public class Brick {
     }
 
     public boolean hit() {
-        currentHits++;
-        updateColor(); // Обновляем цвет после каждого удара
+        currentHits += 1;
+        updateColor();
         if (currentHits >= maxHits) {
             isDestroyed = true;
             return true;
@@ -103,8 +107,20 @@ public class Brick {
         return width;
     }
 
+    public int getHeight() {
+        return height;
+    }
+
     public void setColor(Color color) {
         this.color = color;
+    }
+
+    public BonusType getBonusType() {
+        return bonusType;
+    }
+
+    public void setBonusType(BonusType bonusType) {
+        this.bonusType = bonusType;
     }
 
     private void updateColor() {
@@ -112,4 +128,5 @@ public class Brick {
         int colorIndex = Math.max(0, Math.min(hitsLeft - 1, HIT_COLORS.length - 1));
         this.color = HIT_COLORS[colorIndex];
     }
+
 }

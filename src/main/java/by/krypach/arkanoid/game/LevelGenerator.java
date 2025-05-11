@@ -1,10 +1,11 @@
 package by.krypach.arkanoid.game;
+
+import by.krypach.arkanoid.enums.BonusType;
 import by.krypach.arkanoid.models.Brick;
+
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
-import java.util.Random;
 
 public class LevelGenerator {
     private static final int BRICK_WIDTH = 70;
@@ -13,6 +14,7 @@ public class LevelGenerator {
     private static final int BRICK_VGAP = 10;
     private static final int BRICK_TOP_MARGIN = 50;
     private static final int BRICK_LEFT_MARGIN = 10;
+    private Random random = new Random();
 
     public Level generateLevel(int levelNumber, int rows, int cols, Random random) {
         List<Brick> bricks = new ArrayList<>();
@@ -56,6 +58,9 @@ public class LevelGenerator {
 
             int hitsRequired = brickType + 1;
             Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, pos.y + 1, hitsRequired);
+            if (hasBonuses) {
+                brick.setBonusType(getRandomBonusType(levelNumber));
+            }
             bricks.add(brick);
 
             brickCounts[brickType]--;
@@ -64,7 +69,7 @@ public class LevelGenerator {
         return new Level(levelNumber, bricks, hasBonuses, Color.BLACK);
     }
 
-    private Level generateFirstLevel(int rows, int cols) {
+    public Level generateFirstLevel(int rows, int cols) {
         List<Brick> bricks = new ArrayList<>();
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
@@ -76,5 +81,45 @@ public class LevelGenerator {
             }
         }
         return new Level(1, bricks, false, Color.BLACK);
+    }
+
+    public Level generateLevel3() {
+        List<Brick> bricks = new ArrayList<>();
+        int trapCounter = 0;
+
+        for (int row = 0; row < 5; row++) {
+            for (int col = 0; col < 10; col++) {
+                int x = col * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
+                int y = row * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
+
+                // Определяем прочность кирпича (1-5 ударов)
+                int maxHits = (row % 3) + 1; // Чередуем прочность
+
+                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, maxHits);
+
+                // Каждый 4-й кирпич - ловушка
+                trapCounter++;
+                if (trapCounter % 4 == 0) {
+                    brick.setBonusType(BonusType.TRAP_SHRINK_PADDLE);
+                } else {
+                    brick.setBonusType(getRandomBonusType(3));
+                }
+
+                bricks.add(brick);
+            }
+        }
+
+        return new Level(3, bricks, true, new Color(30, 30, 70)); // Синий фон для уровня
+    }
+
+    public BonusType getRandomBonusType(int levelNumber) {
+        List<BonusType> availableBonuses = new ArrayList<>(Arrays.asList(BonusType.values()));
+        if (levelNumber != 3) {
+            availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
+        }
+        if (availableBonuses.isEmpty()) {
+            return null;
+        }
+        return availableBonuses.get(random.nextInt(availableBonuses.size()));
     }
 }

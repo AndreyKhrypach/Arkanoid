@@ -1,5 +1,7 @@
 package by.krypach.arkanoid.service;
 
+import by.krypach.arkanoid.core.GamePanel;
+import by.krypach.arkanoid.enums.BonusType;
 import by.krypach.arkanoid.models.Ball;
 import by.krypach.arkanoid.models.Brick;
 import by.krypach.arkanoid.models.Paddle;
@@ -11,6 +13,12 @@ import java.util.List;
 import static by.krypach.arkanoid.core.GamePanel.WIDTH;
 
 public class CollisionSystem {
+
+    private final GamePanel gamePanel;
+
+    public CollisionSystem(GamePanel gamePanel) {
+        this.gamePanel = gamePanel;
+    }
 
     public void checkWallCollisions(List<Ball> balls, Random random) {
         for (Ball ball : balls) {
@@ -76,6 +84,24 @@ public class CollisionSystem {
                 ball.setX(brickRect.x + brickRect.width);
             }
             ball.reverseX();
+        }
+
+        boolean wasAlive = brick.isAlive();
+        boolean wasDestroyed = brick.hit();
+
+        if (wasAlive && wasDestroyed) {
+            gamePanel.addScore(gamePanel.calculateScoreForBrick(brick) * brick.getMaxHits());
+            BonusType bonusType = brick.getBonusType();
+            if (bonusType != null) {
+                if (brick.getBonusType().isTrap()) {
+                    // Ловушка: уменьшаем платформу на 30%
+                    Paddle paddle = gamePanel.getPaddle();
+                    paddle.setWidth((int)(paddle.getWidth() * 0.7));
+                } else {
+                    // Обычные бонусы
+                    gamePanel.getBonusManager().spawnFromBrick(brick);
+                }
+            }
         }
     }
 }

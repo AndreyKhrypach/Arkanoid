@@ -48,16 +48,13 @@ public class Bonus {
                 g.drawString(">>", x+8, y+12);
             }
             case EXTRA_BALL -> { // Круглый бонус
-                // Рисуем мяч с плюсом
                 g.setColor(Color.WHITE);
                 g.fillOval(x + 3, y + 3, WIDTH - 6, HEIGHT - 6);
 
-                // Красный "+"
                 g.setColor(Color.RED);
                 g.setFont(new Font("Arial", Font.BOLD, 14));
                 g.drawString("+", x + 11, y + 15);
 
-                // Оранжевая обводка
                 g.setColor(new Color(255, 150, 0));
                 g.drawOval(x + 3, y + 3, WIDTH - 6, HEIGHT - 6);
             }
@@ -68,23 +65,18 @@ public class Bonus {
                 g.drawString("⌛", x+8, y+12);
             }
             case EXTRA_LIFE -> {
-                // Рисуем пульсирующее сердечко
                 int centerX = x + WIDTH/2;
                 int centerY = y + HEIGHT/2;
                 int size = (int)(15 * pulseScale);
 
                 g.setColor(heartColor);
 
-                // Левая половина сердца
                 g.fillArc(centerX - size, centerY - size/2, size, size, 0, 180);
-                // Правая половина сердца
                 g.fillArc(centerX, centerY - size/2, size, size, 0, 180);
-                // Нижний треугольник
                 int[] xPoints = {centerX - size, centerX + size, centerX};
                 int[] yPoints = {centerY, centerY, centerY + size};
                 g.fillPolygon(xPoints, yPoints, 3);
 
-                // Белая обводка для контраста
                 g.setColor(Color.WHITE);
                 g.drawArc(centerX - size, centerY - size/2, size, size, 0, 180);
                 g.drawArc(centerX, centerY - size/2, size, size, 0, 180);
@@ -113,6 +105,10 @@ public class Bonus {
 
     public BonusType getType() {
         return type;
+    }
+
+    public int getX() {
+        return x;
     }
 
     public int getY() {
