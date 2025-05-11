@@ -82,10 +82,6 @@ public class Ball {
         this.speedMultiplier = speedMultiplier;
     }
 
-    public Color getColor() {
-        return color;
-    }
-
     public void setColor(Color color) {
         this.color = color;
     }
