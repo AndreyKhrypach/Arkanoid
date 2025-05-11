@@ -21,16 +21,4 @@ public class Level {
     public List<Brick> getBricks() {
         return new ArrayList<>(bricks);
     }
-
-    public boolean hasBonuses() {
-        return hasBonuses;
-    }
-
-    public int getLevelNumber() {
-        return levelNumber;
-    }
-
-    public Color getBaseColor() {
-        return baseColor;
-    }
 }
