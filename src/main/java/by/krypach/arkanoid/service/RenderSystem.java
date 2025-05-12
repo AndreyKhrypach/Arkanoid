@@ -4,15 +4,30 @@ import by.krypach.arkanoid.core.GamePanel;
 import by.krypach.arkanoid.models.*;
 
 import java.awt.*;
+import java.io.InputStream;
 
 import static by.krypach.arkanoid.core.GamePanel.HEIGHT;
 import static by.krypach.arkanoid.core.GamePanel.WIDTH;
 
 public class RenderSystem {
     private final GamePanel gamePanel;
+    private Font chessFont;
 
     public RenderSystem(GamePanel panel) {
         this.gamePanel = panel;
+        try {
+            // Пробуем загрузить как ресурс
+            InputStream is = getClass().getResourceAsStream("/DejaVuSans.ttf");
+            if (is != null) {
+                this.chessFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(26f);
+            } else {
+                throw new Exception("Файл шрифта не найден в ресурсах");
+            }
+        } catch (Exception e) {
+            // Fallback на стандартный шрифт
+            this.chessFont = new Font("Arial", Font.BOLD, 26);
+            System.err.println("Не удалось загрузить шрифт, используем стандартный");
+        }
     }
 
     public void render(Graphics g) {
@@ -48,18 +63,54 @@ public class RenderSystem {
     }
 
     private void renderBricks(Graphics g) {
+        Color originalColor = g.getColor();
+
         for (Brick brick : gamePanel.getBricks()) {
             if (!brick.isDestroyed()) {
+                // Рисуем кирпич (используем метод draw из класса Brick)
                 brick.draw(g);
 
-                // Рисуем маркер ловушки
                 if (brick.getBonusType() != null && brick.getBonusType().isTrap()) {
                     g.setColor(brick.getBonusType().getColor());
                     g.drawRect(brick.getX() + 5, brick.getY() + 5,
                             brick.getWidth() - 10, brick.getHeight() - 10);
                 }
+
+                if (gamePanel.getCurrentLevelNumber() == 4 && brick.getChessSymbol() != null
+                        && !brick.getChessSymbol().trim().isEmpty()) {
+                    boolean isWhiteFigure = brick.getY() > HEIGHT / 2;
+
+                    // Уменьшаем ширину в 2 раза (но не менее 10 пикселей)
+                    int padding = 2;
+                    int bgWidth = Math.max(10, (brick.getWidth() - 2*padding) / 2); // Уменьшили ширину
+                    int bgHeight = brick.getHeight() - 2*padding;
+
+                    // Центрируем уменьшенный прямоугольник
+                    int centerX = brick.getX() + (brick.getWidth() - bgWidth)/2;
+
+                    // Рисуем фон для фигуры
+                    g.setColor(isWhiteFigure ? Color.WHITE : Color.BLACK);
+                    g.fillRect(
+                            centerX,
+                            brick.getY() + padding,
+                            bgWidth,
+                            bgHeight
+                    );
+
+                    // Рисуем фигуру
+                    g.setFont(chessFont);
+                    String symbol = brick.getChessSymbol();
+                    FontMetrics fm = g.getFontMetrics();
+                    int x = brick.getX() + (brick.getWidth() - fm.stringWidth(symbol))/2;
+                    int y = brick.getY() + brick.getHeight()/2 + 10;
+
+                    g.setColor(isWhiteFigure ? Color.BLACK : Color.WHITE);
+                    g.drawString(symbol, x, y);
+                }
             }
         }
+
+        g.setColor(originalColor);
     }
 
     private void renderBalls(Graphics g) {
@@ -146,5 +197,4 @@ public class RenderSystem {
         int width = g.getFontMetrics().stringWidth(scoreText);
         g.drawString(scoreText, WIDTH / 2 - width / 2, HEIGHT / 2 + 40);
     }
-
 }
