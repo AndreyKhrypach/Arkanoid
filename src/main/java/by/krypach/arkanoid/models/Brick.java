@@ -13,6 +13,7 @@ public class Brick {
     private int maxHits;
     private int currentHits;
     private BonusType bonusType;
+    private String chessSymbol;
 
     private static final Color[] HIT_COLORS = {
             new Color(255, 182, 193), // 1 удар (розовый)
@@ -22,7 +23,7 @@ public class Brick {
             new Color(128, 0, 128)    // 5 ударов (фиолетовый)
     };
 
-    public Brick(int x, int y, int width, int height, int row, int maxHits) {
+    public Brick(int x, int y, int width, int height, int row, int maxHits, String chessSymbol) {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -31,28 +32,25 @@ public class Brick {
         this.isDestroyed = false;
         this.maxHits = maxHits;
         this.currentHits = 0;
+        this.chessSymbol = chessSymbol;
         updateColor();
     }
 
     public void draw(Graphics g) {
         if (!isDestroyed) {
+            // Сохраняем оригинальный цвет
+            Color originalColor = g.getColor();
+
+            // Рисуем основной прямоугольник кирпича
             g.setColor(color);
             g.fillRect(x, y, width, height);
+
+            // Рисуем белую рамку
             g.setColor(Color.WHITE);
             g.drawRect(x, y, width, height);
 
-            int hitsLeft = maxHits - currentHits;
-            String hitsText = String.valueOf(hitsLeft);
-            g.setColor(Color.BLACK);
-            g.setFont(new Font("Arial", Font.BOLD, 14));
-
-            FontMetrics fm = g.getFontMetrics();
-            int textWidth = fm.stringWidth(hitsText);
-            int textHeight = fm.getAscent();
-
-            g.drawString(hitsText,
-                    x + (width - textWidth) / 2,
-                    y + (height + textHeight) / 2 - 2);
+            // Восстанавливаем оригинальный цвет
+            g.setColor(originalColor);
         }
     }
 
@@ -123,10 +121,13 @@ public class Brick {
         this.bonusType = bonusType;
     }
 
+    public String getChessSymbol() {
+        return chessSymbol;
+    }
+
     private void updateColor() {
         int hitsLeft = maxHits - currentHits;
         int colorIndex = Math.max(0, Math.min(hitsLeft - 1, HIT_COLORS.length - 1));
         this.color = HIT_COLORS[colorIndex];
     }
-
 }

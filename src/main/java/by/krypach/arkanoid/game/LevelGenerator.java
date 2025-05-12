@@ -14,6 +14,21 @@ public class LevelGenerator {
     private static final int BRICK_VGAP = 10;
     private static final int BRICK_TOP_MARGIN = 50;
     private static final int BRICK_LEFT_MARGIN = 10;
+    // Черные фигуры (стандартные Unicode)
+    public static final String BLACK_KING = "♔";
+    public static final String BLACK_QUEEN = "♕";
+    public static final String BLACK_ROOK = "♖";
+    public static final String BLACK_BISHOP = "♗";
+    public static final String BLACK_KNIGHT = "♘";
+    public static final String BLACK_PAWN = "♙";
+
+    // Белые фигуры (используем другие Unicode символы)
+    public static final String WHITE_KING = "♚";
+    public static final String WHITE_QUEEN = "♛";
+    public static final String WHITE_ROOK = "♜";
+    public static final String WHITE_BISHOP = "♝";
+    public static final String WHITE_KNIGHT = "♞";
+    public static final String WHITE_PAWN = "♟";
     private Random random = new Random();
 
     public Level generateLevel(int levelNumber, int rows, int cols, Random random) {
@@ -57,7 +72,7 @@ public class LevelGenerator {
             if (brickType >= brickCounts.length) brickType = brickCounts.length - 1;
 
             int hitsRequired = brickType + 1;
-            Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, pos.y + 1, hitsRequired);
+            Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, pos.y + 1, hitsRequired, "");
             if (hasBonuses) {
                 brick.setBonusType(getRandomBonusType(levelNumber));
             }
@@ -75,7 +90,7 @@ public class LevelGenerator {
             for (int col = 0; col < cols; col++) {
                 int x = col * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
                 int y = row * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
-                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, 1);
+                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, 1, "");
                 brick.setColor(new Color(255, 182, 193)); // Розовый для 1 уровня
                 bricks.add(brick);
             }
@@ -95,7 +110,7 @@ public class LevelGenerator {
                 // Определяем прочность кирпича (1-5 ударов)
                 int maxHits = (row % 3) + 1; // Чередуем прочность
 
-                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, maxHits);
+                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, maxHits, "");
 
                 // Каждый 4-й кирпич - ловушка
                 trapCounter++;
@@ -112,6 +127,72 @@ public class LevelGenerator {
         return new Level(3, bricks, true, new Color(30, 30, 70)); // Синий фон для уровня
     }
 
+    public Level generateChessLevel() {
+        List<Brick> bricks = new ArrayList<>();
+
+        String[][] chessBoard = {
+                {" ", BLACK_ROOK, BLACK_KNIGHT, BLACK_BISHOP, BLACK_QUEEN, BLACK_KING, BLACK_BISHOP, BLACK_KNIGHT, BLACK_ROOK, " "},
+                {" ", BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, " "},
+                {" ", " ", " ", " ", " ", " ", " ", " ", " ", " "},
+                {" ", WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, " "},
+                {" ", WHITE_ROOK, WHITE_KNIGHT, WHITE_BISHOP, WHITE_QUEEN, WHITE_KING, WHITE_BISHOP, WHITE_KNIGHT, WHITE_ROOK, " "}
+        };
+
+        // Счетчик для распределения прочности кирпичей
+        int hitCounter = 1;
+
+        for (int row = 0; row < chessBoard.length; row++) {
+            for (int col = 0; col < chessBoard[row].length; col++) {
+                int x = col * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
+                int y = row * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
+                String symbol = chessBoard[row][col];
+
+                // Определяем прочность кирпича
+                int hits = 1; // По умолчанию 1 удар
+                if (!symbol.trim().isEmpty()) {
+                    hits = getHitsForSymbol(symbol);
+                } else {
+                    // Для пустых кирпичей чередуем прочность 1-5
+                    hits = hitCounter % 5 + 1;
+                    hitCounter++;
+                }
+
+                // Создаем кирпич
+                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, hits, symbol);
+
+                // Устанавливаем цвет по количеству ударов
+                brick.setColor(getColorForHits(hits));
+
+                // Для фигур добавляем бонусы
+                if (!symbol.trim().isEmpty()) {
+                    brick.setBonusType(getRandomBonusType(4));
+                }
+
+                bricks.add(brick);
+            }
+        }
+
+        return new Level(4, bricks, true, new Color(30, 30, 30));
+    }
+
+    // Возвращает цвет по количеству ударов (как в текущей системе)
+    private Color getColorForHits(int hits) {
+        switch (hits) {
+            case 1:
+                return new Color(255, 182, 193); // Розовый
+            case 2:
+                return Color.YELLOW;
+            case 3:
+                return Color.GREEN;
+            case 4:
+                return Color.RED;
+            case 5:
+                return new Color(128, 0, 128);   // Фиолетовый
+            default:
+                return Color.WHITE;
+        }
+    }
+
     public BonusType getRandomBonusType(int levelNumber) {
         List<BonusType> availableBonuses = new ArrayList<>(Arrays.asList(BonusType.values()));
         if (levelNumber != 3) {
@@ -121,5 +202,17 @@ public class LevelGenerator {
             return null;
         }
         return availableBonuses.get(random.nextInt(availableBonuses.size()));
+    }
+
+    private int getHitsForSymbol(String symbol) {
+        return switch (symbol) {
+            case BLACK_PAWN, WHITE_PAWN -> 1;
+            case BLACK_KNIGHT, WHITE_KNIGHT -> 2; // Конь
+            case BLACK_BISHOP, WHITE_BISHOP -> 2; // Слон
+            case BLACK_ROOK, WHITE_ROOK -> 3;
+            case BLACK_QUEEN, WHITE_QUEEN -> 4;
+            case BLACK_KING, WHITE_KING -> 5;
+            default -> random.nextInt(2) + 4;
+        };
     }
 }
