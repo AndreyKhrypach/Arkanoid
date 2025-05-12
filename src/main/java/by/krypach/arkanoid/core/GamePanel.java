@@ -74,7 +74,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(1);
+        loadLevel(4);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -251,6 +251,10 @@ public class GamePanel extends JPanel implements KeyListener {
                 this.currentLevel = levelGenerator.generateLevel3();
                 bonusManager.setCurrentDropChance(0.5);
                 break;
+            case 4:  // Новый шахматный уровень
+                this.currentLevel = levelGenerator.generateChessLevel();
+                bonusManager.setCurrentDropChance(0.4);  // Больше бонусов для сложного уровня
+                break;
             default:
                 this.currentLevel = levelGenerator.generateLevel(levelNumber, 5, 10, random);
                 bonusManager.setCurrentDropChance(0.3);
@@ -288,10 +292,7 @@ public class GamePanel extends JPanel implements KeyListener {
         List<Ball> ballsCopy = new ArrayList<>(balls);
         List<Brick> bricksCopy = new ArrayList<>(bricks);
 
-        Iterator<Ball> ballIterator = ballsCopy.iterator();
-        while (ballIterator.hasNext()) {
-            Ball ball = ballIterator.next();
-
+        for (Ball ball : ballsCopy) {
             if (ball.getY() > HEIGHT) {
                 balls.remove(ball); // Safe because we're not iterating over the original
                 if (balls.isEmpty()) {
