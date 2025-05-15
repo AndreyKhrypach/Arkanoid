@@ -10,7 +10,6 @@ import by.krypach.arkanoid.service.CollisionSystem;
 import by.krypach.arkanoid.service.RenderSystem;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import javax.swing.*;
 import java.awt.*;
@@ -34,7 +33,6 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean timeSlowActive = false;
     private double timeSlowRemaining = 0;
     private Level currentLevel;
-    private boolean levelCompleted = false;
     private boolean levelTransitionInProgress = false;
     private boolean lifeAnimationActive = false;
     private Color lifeAnimationColor = Color.BLACK;
@@ -74,7 +72,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(4);
+        loadLevel(2);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -152,6 +150,14 @@ public class GamePanel extends JPanel implements KeyListener {
         return 6 - brick.getRow(); // Обратный порядок: 1 строка -> 5 очков, 5 строка -> 1 очко
     }
 
+    public void checkWinCondition() {
+        if ( levelTransitionInProgress || !isRunning) return;
+
+        if (currentLevel.isCompleted() || currentLevel.isLevelCompleted()) {
+            showLevelComplete();
+        }
+    }
+
     public void setTimeSlowActive(boolean active) {
         this.timeSlowActive = active;
     }
@@ -185,10 +191,6 @@ public class GamePanel extends JPanel implements KeyListener {
 
     public boolean isPaused() {
         return isPaused;
-    }
-
-    public boolean isLevelCompleted() {
-        return levelCompleted;
     }
 
     public int getDeathAnimationCounter() {
@@ -235,7 +237,6 @@ public class GamePanel extends JPanel implements KeyListener {
 
     private void loadLevel(int levelNumber) {
         bonusManager.clear();
-        levelCompleted = false;
         levelTransitionInProgress = false;
 
         switch(levelNumber) {
@@ -251,15 +252,20 @@ public class GamePanel extends JPanel implements KeyListener {
                 this.currentLevel = levelGenerator.generateLevel3();
                 bonusManager.setCurrentDropChance(0.5);
                 break;
-            case 4:  // Новый шахматный уровень
+            case 4:
                 this.currentLevel = levelGenerator.generateChessLevel();
                 bonusManager.setCurrentDropChance(0.4);  // Больше бонусов для сложного уровня
+                break;
+            case 5:  // Новый уровень-лабиринт
+                this.currentLevel = levelGenerator.generateMazeLevel();
+                bonusManager.setCurrentDropChance(0.6);  // Больше бонусов в лабиринте
                 break;
             default:
                 this.currentLevel = levelGenerator.generateLevel(levelNumber, 5, 10, random);
                 bonusManager.setCurrentDropChance(0.3);
         }
 
+        currentLevel.setLevelCompleted(false);
         this.bricks.clear();
         this.bricks.addAll(currentLevel.getBricks());
         setBackground(currentLevel.getBackgroundColor());
@@ -335,27 +341,26 @@ public class GamePanel extends JPanel implements KeyListener {
         collisionSystem.checkPaddleCollision(balls, paddle);
     }
 
-    private void checkWinCondition() {
-        if (levelCompleted || levelTransitionInProgress || !isRunning) return;
-
-        if (currentLevel.isCompleted()) {
-            levelCompleted = true;
-            showLevelComplete();
-        }
-    }
-
     private void showLevelComplete() {
         if (levelTransitionInProgress) return;
-        levelTransitionInProgress = true;
 
+        // Сначала показываем сообщение
+        currentLevel.setLevelCompleted(true);
         isPaused = true;
-        Timer transitionTimer = new Timer(2000, e -> {
-            // Очищаем все мячи перед загрузкой нового уровня
+        repaint(); // Принудительно обновляем экран
+
+        // Затем через небольшой таймер начинаем переход
+        Timer showMessageTimer = new Timer(1000, e -> {
+            levelTransitionInProgress = true;
             balls.clear();
 
             if (currentLevel.getLevelNumber() < 10) {
-                currentLevel.setLevelNumber(currentLevel.getLevelNumber() + 1);
-                loadLevel(currentLevel.getLevelNumber());
+                int nextLevel = currentLevel.getLevelNumber() + 1;
+                loadLevel(nextLevel);
+
+                if (nextLevel == 5) {
+                    renderSystem.drawCenteredText(getGraphics(), "Вы нашли выход из лабиринта!", 30, HEIGHT/2 - 30);
+                }
             } else {
                 gameComplete();
                 renderSystem.drawCenteredText(getGraphics(), "ПОБЕДА! Финальный счет: " + score, 40, HEIGHT/2);
@@ -364,13 +369,13 @@ public class GamePanel extends JPanel implements KeyListener {
             levelTransitionInProgress = false;
             ((Timer)e.getSource()).stop();
         });
-        transitionTimer.setRepeats(false);
-        transitionTimer.start();
+        showMessageTimer.setRepeats(false);
+        showMessageTimer.start();
     }
 
     private void gameComplete() {
         isRunning = false;
-        levelCompleted = true;
+        currentLevel.setLevelCompleted(true);
         balls.clear();
         bonusManager.clear();
 

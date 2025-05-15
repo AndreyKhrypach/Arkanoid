@@ -88,10 +88,6 @@ public class Bonus {
             g.drawRect(x, y, WIDTH, HEIGHT);
     }
 
-    public Rectangle getBounds() {
-        return new Rectangle(x, y, WIDTH, HEIGHT);
-    }
-
     public boolean checkCollision(Rectangle otherBounds) {
         if (!active) return false;
 
@@ -105,10 +101,6 @@ public class Bonus {
 
     public BonusType getType() {
         return type;
-    }
-
-    public int getX() {
-        return x;
     }
 
     public int getY() {
@@ -131,8 +123,5 @@ public class Bonus {
         this.pulseGrowing = pulseGrowing;
     }
 
-    public Color getHeartColor() {
-        return heartColor;
-    }
 }
 

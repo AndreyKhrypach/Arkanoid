@@ -94,13 +94,19 @@ public class CollisionSystem {
             BonusType bonusType = brick.getBonusType();
             if (bonusType != null) {
                 if (brick.getBonusType().isTrap()) {
-                    // Ловушка: уменьшаем платформу на 30%
                     Paddle paddle = gamePanel.getPaddle();
                     paddle.setWidth((int)(paddle.getWidth() * 0.7));
                 } else {
-                    // Обычные бонусы
                     gamePanel.getBonusManager().spawnFromBrick(brick);
                 }
+            }
+
+            // Особый случай - выход из лабиринта
+            if ("EXIT".equals(brick.getChessSymbol())) {
+                gamePanel.addScore(1000);
+                // Немедленно завершаем уровень
+                gamePanel.getCurrentLevel().setLevelCompleted(true);
+                gamePanel.checkWinCondition(); // Принудительно проверяем условие победы
             }
         }
     }

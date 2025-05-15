@@ -69,7 +69,6 @@ public class Paddle {
     }
     public int getWidth() { return width; }
     public int getY() { return y; }
-    public int getHeight() { return height; }
     public float getCurrentSpeed() { return currentSpeed; }
 
     public void setCurrentSpeed(float speed) { this.currentSpeed = speed; }
