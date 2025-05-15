@@ -36,6 +36,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean levelTransitionInProgress = false;
     private boolean lifeAnimationActive = false;
     private Color lifeAnimationColor = Color.BLACK;
+    private boolean laserActive = false;
 
     // models
     private final Paddle paddle;
@@ -72,7 +73,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(4);
+        loadLevel(1);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -85,6 +86,9 @@ public class GamePanel extends JPanel implements KeyListener {
             bonusManager.timeSlowEffect(deltaTime);
             bonusManager.update(deltaTime);
             bonusManager.checkCollisions(paddle, balls);
+        }
+        if (laserActive) {
+            collisionSystem.checkLaserCollisions();
         }
 
         checkCollisions();
@@ -107,6 +111,9 @@ public class GamePanel extends JPanel implements KeyListener {
                             ball.setSpeed(0, -375);
                         }
                     }
+                }
+                if (laserActive) {
+                    paddle.fireLaser();
                 }
             }
             case KeyEvent.VK_LEFT -> leftPressed = true;
@@ -213,6 +220,10 @@ public class GamePanel extends JPanel implements KeyListener {
         return timeSlowRemaining;
     }
 
+    public void setLaserActive(boolean laserActive) {
+        this.laserActive = laserActive;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -238,6 +249,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private void loadLevel(int levelNumber) {
         bonusManager.clear();
         levelTransitionInProgress = false;
+        paddle.getLaserBeams().clear();
 
         switch(levelNumber) {
             case 1:
@@ -280,6 +292,8 @@ public class GamePanel extends JPanel implements KeyListener {
 
         paddle.setWidth(initialPaddleWidth);
         paddle.setPreciseX(WIDTH / 2.0 - initialPaddleWidth / 2.0);
+        paddle.deactivateLaser(); // Добавляем деактивацию лазера
+        laserActive = false; // Сбрасываем флаг активности лазера
     }
 
     private Ball createNewBall() {
@@ -347,7 +361,10 @@ public class GamePanel extends JPanel implements KeyListener {
         // Сначала показываем сообщение
         currentLevel.setLevelCompleted(true);
         isPaused = true;
-        repaint(); // Принудительно обновляем экран
+        repaint();
+
+        paddle.getLaserBeams().clear();
+        laserActive = false;
 
         // Затем через небольшой таймер начинаем переход
         Timer showMessageTimer = new Timer(1000, e -> {
@@ -378,6 +395,7 @@ public class GamePanel extends JPanel implements KeyListener {
         currentLevel.setLevelCompleted(true);
         balls.clear();
         bonusManager.clear();
+        paddle.clearLasers();
 
         renderSystem.drawCenteredText(getGraphics(), "ИГРА ЗАВЕРШЕНА! Финальный счет: " + score, 30, HEIGHT/2);
         repaint();
@@ -416,5 +434,7 @@ public class GamePanel extends JPanel implements KeyListener {
         paddle.setWidth(initialPaddleWidth);
         paddle.setPreciseX(WIDTH / 2.0 - initialPaddleWidth / 2.0);
         paddle.setCurrentSpeed(0);
+        paddle.clearLasers();
+        laserActive = false;
     }
 }

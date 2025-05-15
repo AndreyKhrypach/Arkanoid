@@ -119,6 +119,7 @@ public class RenderSystem {
 
     private void renderPaddle(Graphics g) {
         gamePanel.getPaddle().draw(g);
+        gamePanel.getPaddle().getLaserBeams().forEach(laser -> laser.draw(g));
     }
 
     private void renderBonuses(Graphics g) {
