@@ -116,12 +116,6 @@ public class BonusManager {
             }
             case EXTRA_LIFE -> {
                 gamePanel.setLives(gamePanel.getLives() + 1);
-                Color heartColor = getActiveBonuses().stream()
-                        .filter(b -> b.getType() == BonusType.EXTRA_LIFE)
-                        .findFirst()
-                        .map(Bonus::getHeartColor)
-                        .orElse(Color.PINK);
-
                 // Запускаем анимацию через GamePanel
                 gamePanel.animateLifeGain();
             }

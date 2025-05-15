@@ -29,7 +29,7 @@ public class LevelGenerator {
     public static final String WHITE_BISHOP = "♝";
     public static final String WHITE_KNIGHT = "♞";
     public static final String WHITE_PAWN = "♟";
-    private Random random = new Random();
+    private final Random random = new Random();
 
     public Level generateLevel(int levelNumber, int rows, int cols, Random random) {
         List<Brick> bricks = new ArrayList<>();
@@ -148,7 +148,7 @@ public class LevelGenerator {
                 String symbol = chessBoard[row][col];
 
                 // Определяем прочность кирпича
-                int hits = 1; // По умолчанию 1 удар
+                int hits; // По умолчанию 1 удар
                 if (!symbol.trim().isEmpty()) {
                     hits = getHitsForSymbol(symbol);
                 } else {
@@ -175,22 +175,54 @@ public class LevelGenerator {
         return new Level(4, bricks, true, new Color(30, 30, 30));
     }
 
+    public Level generateMazeLevel() {
+        List<Brick> bricks = new ArrayList<>();
+        int[][] mazePattern = {
+                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                {1, 0, 0, 1, 0, 0, 0, 1, 0, 1},
+                {1, 0, 1, 1, 0, 1, 0, 1, 0, 1},
+                {1, 0, 0, 0, 0, 1, 0, 0, 0, 1},
+                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+        };
+
+        for (int row = 0; row < mazePattern.length; row++) {
+            for (int col = 0; col < mazePattern[row].length; col++) {
+                if (mazePattern[row][col] == 1) {
+                    int x = col * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
+                    int y = row * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
+
+                    // Создаем прочные кирпичи для стен лабиринта
+                    Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, 5, "");
+                    brick.setColor(new Color(70, 70, 70)); // Серый цвет для стен
+
+                    brick.setBonusType(getRandomBonusType(5));
+
+                    bricks.add(brick);
+                }
+            }
+        }
+
+        // Добавляем "выход" из лабиринта - особый кирпич
+        int exitX = 8 * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
+        int exitY = (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
+        Brick exitBrick = new Brick(exitX, exitY, BRICK_WIDTH, BRICK_HEIGHT, 2, 1, "EXIT");
+        exitBrick.setColor(Color.ORANGE);
+        exitBrick.setBonusType(BonusType.EXTRA_LIFE); // Особый бонус за выход
+        bricks.add(exitBrick);
+
+        return new Level(5, bricks, true, new Color(20, 20, 40)); // Темно-синий фон
+    }
+
     // Возвращает цвет по количеству ударов (как в текущей системе)
     private Color getColorForHits(int hits) {
-        switch (hits) {
-            case 1:
-                return new Color(255, 182, 193); // Розовый
-            case 2:
-                return Color.YELLOW;
-            case 3:
-                return Color.GREEN;
-            case 4:
-                return Color.RED;
-            case 5:
-                return new Color(128, 0, 128);   // Фиолетовый
-            default:
-                return Color.WHITE;
-        }
+        return switch (hits) {
+            case 1 -> new Color(255, 182, 193); // Розовый
+            case 2 -> Color.YELLOW;
+            case 3 -> Color.GREEN;
+            case 4 -> Color.RED;
+            case 5 -> new Color(128, 0, 128);   // Фиолетовый
+            default -> Color.WHITE;
+        };
     }
 
     public BonusType getRandomBonusType(int levelNumber) {

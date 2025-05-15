@@ -82,11 +82,11 @@ public class RenderSystem {
 
                     // Уменьшаем ширину в 2 раза (но не менее 10 пикселей)
                     int padding = 2;
-                    int bgWidth = Math.max(10, (brick.getWidth() - 2*padding) / 2); // Уменьшили ширину
-                    int bgHeight = brick.getHeight() - 2*padding;
+                    int bgWidth = Math.max(10, (brick.getWidth() - 2 * padding) / 2); // Уменьшили ширину
+                    int bgHeight = brick.getHeight() - 2 * padding;
 
                     // Центрируем уменьшенный прямоугольник
-                    int centerX = brick.getX() + (brick.getWidth() - bgWidth)/2;
+                    int centerX = brick.getX() + (brick.getWidth() - bgWidth) / 2;
 
                     // Рисуем фон для фигуры
                     g.setColor(isWhiteFigure ? Color.WHITE : Color.BLACK);
@@ -101,8 +101,8 @@ public class RenderSystem {
                     g.setFont(chessFont);
                     String symbol = brick.getChessSymbol();
                     FontMetrics fm = g.getFontMetrics();
-                    int x = brick.getX() + (brick.getWidth() - fm.stringWidth(symbol))/2;
-                    int y = brick.getY() + brick.getHeight()/2 + 10;
+                    int x = brick.getX() + (brick.getWidth() - fm.stringWidth(symbol)) / 2;
+                    int y = brick.getY() + brick.getHeight() / 2 + 10;
 
                     g.setColor(isWhiteFigure ? Color.BLACK : Color.WHITE);
                     g.drawString(symbol, x, y);
@@ -144,7 +144,8 @@ public class RenderSystem {
 
 
     private void renderGameState(Graphics g) {
-        if (gamePanel.isPaused() && gamePanel.isLevelCompleted()) {
+        if (gamePanel.getCurrentLevel().isLevelCompleted()) {
+            g.setColor(Color.orange);
             drawCenteredText(g, "Уровень " + (gamePanel.getCurrentLevelNumber()) + " пройден!", 40, HEIGHT / 2 - 50);
             drawCenteredText(g, "Переход на уровень " + (gamePanel.getCurrentLevelNumber() + 1), 30, HEIGHT / 2 + 20);
         }
@@ -155,7 +156,7 @@ public class RenderSystem {
             gamePanel.setDeathAnimationCounter(gamePanel.getDeathAnimationCounter() - 1);
         }
 
-        if (gamePanel.isPaused()) {
+        if (gamePanel.isPaused() && !gamePanel.getCurrentLevel().isLevelCompleted()) {
             drawCenteredText(g, "PAUSED", 40, 300);
         }
 
@@ -172,7 +173,7 @@ public class RenderSystem {
         }
 
         if (!gamePanel.isRunning()) {
-            if (gamePanel.isLevelCompleted() && gamePanel.getCurrentLevelNumber() > 10) {
+            if (gamePanel.getCurrentLevel().isLevelCompleted() && gamePanel.getCurrentLevelNumber() > 10) {
                 drawCenteredText(g, "ИГРА ЗАВЕРШЕНА!", 40, HEIGHT / 2 - 30);
                 drawCenteredText(g, "Финальный счет: " + gamePanel.getScore(), 30, HEIGHT / 2 + 20);
             } else if (gamePanel.getLives() <= 0) {
