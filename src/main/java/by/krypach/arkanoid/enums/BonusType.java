@@ -8,7 +8,8 @@ public enum BonusType {
     BALL_SPEED_UP(Color.YELLOW),
     EXTRA_BALL(Color.CYAN),
     TIME_SLOW(Color.BLUE),
-    EXTRA_LIFE(Color.PINK);
+    EXTRA_LIFE(Color.PINK),
+    LASER_GUN(Color.RED);
 
     private final Color color;
 

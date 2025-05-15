@@ -24,7 +24,7 @@ public class Bonus {
     }
 
     public void update(double deltaTime) {
-        y += (int)(SPEED * deltaTime);
+        y += (int) (SPEED * deltaTime);
     }
 
     public void draw(Graphics g) {
@@ -34,18 +34,18 @@ public class Bonus {
         g.setColor(new Color(50, 50, 50, 150)); // Темно-серый с прозрачностью
         g.fillRect(x, y, WIDTH, HEIGHT);
 
-        switch(type) {
+        switch (type) {
             case PADDLE_EXTEND -> { // Синий прямоугольник
                 g.setColor(Color.CYAN);
                 g.fillRect(x, y, WIDTH, HEIGHT);
                 g.setColor(Color.BLACK);
-                g.drawString("→|←", x+5, y+12);
+                g.drawString("→|←", x + 5, y + 12);
             }
             case BALL_SPEED_UP -> { // Оранжевый прямоугольник
                 g.setColor(Color.ORANGE);
                 g.fillRect(x, y, WIDTH, HEIGHT);
                 g.setColor(Color.RED);
-                g.drawString(">>", x+8, y+12);
+                g.drawString(">>", x + 8, y + 12);
             }
             case EXTRA_BALL -> { // Круглый бонус
                 g.setColor(Color.WHITE);
@@ -62,30 +62,36 @@ public class Bonus {
                 g.setColor(new Color(100, 100, 255));
                 g.fillRect(x, y, WIDTH, HEIGHT);
                 g.setColor(Color.WHITE);
-                g.drawString("⌛", x+8, y+12);
+                g.drawString("⌛", x + 8, y + 12);
             }
             case EXTRA_LIFE -> {
-                int centerX = x + WIDTH/2;
-                int centerY = y + HEIGHT/2;
-                int size = (int)(15 * pulseScale);
+                int centerX = x + WIDTH / 2;
+                int centerY = y + HEIGHT / 2;
+                int size = (int) (15 * pulseScale);
 
                 g.setColor(heartColor);
 
-                g.fillArc(centerX - size, centerY - size/2, size, size, 0, 180);
-                g.fillArc(centerX, centerY - size/2, size, size, 0, 180);
+                g.fillArc(centerX - size, centerY - size / 2, size, size, 0, 180);
+                g.fillArc(centerX, centerY - size / 2, size, size, 0, 180);
                 int[] xPoints = {centerX - size, centerX + size, centerX};
                 int[] yPoints = {centerY, centerY, centerY + size};
                 g.fillPolygon(xPoints, yPoints, 3);
 
                 g.setColor(Color.WHITE);
-                g.drawArc(centerX - size, centerY - size/2, size, size, 0, 180);
-                g.drawArc(centerX, centerY - size/2, size, size, 0, 180);
+                g.drawArc(centerX - size, centerY - size / 2, size, size, 0, 180);
+                g.drawArc(centerX, centerY - size / 2, size, size, 0, 180);
                 g.drawPolygon(xPoints, yPoints, 3);
+            }
+            case LASER_GUN -> {
+                int[] xPoints = {x, x + WIDTH / 2, x + WIDTH};
+                int[] yPoints = {y + HEIGHT, y, y + HEIGHT};
+                g.setColor(Color.RED);
+                g.fillPolygon(xPoints, yPoints, 3);
             }
         }
 
-            g.setColor(Color.BLACK);
-            g.drawRect(x, y, WIDTH, HEIGHT);
+        g.setColor(Color.BLACK);
+        g.drawRect(x, y, WIDTH, HEIGHT);
     }
 
     public boolean checkCollision(Rectangle otherBounds) {
@@ -122,6 +128,4 @@ public class Bonus {
     public void setPulseGrowing(boolean pulseGrowing) {
         this.pulseGrowing = pulseGrowing;
     }
-
 }
-

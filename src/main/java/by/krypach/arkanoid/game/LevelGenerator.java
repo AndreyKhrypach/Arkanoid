@@ -198,15 +198,22 @@ public class LevelGenerator {
 
     public BonusType getRandomBonusType(int levelNumber) {
         List<BonusType> availableBonuses = new ArrayList<>(Arrays.asList(BonusType.values()));
+
         if (levelNumber < 3) {
             availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
-        } else {
-            // Начиная с 3 уровня, 20% шанс получить ловушку
+        } else if (levelNumber < 6) {
             if (random.nextDouble() < 0.25) {
                 return BonusType.TRAP_SHRINK_PADDLE;
             }
             availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
         }
+
+        if (levelNumber >= 6) {
+            if (random.nextDouble() < 0.15) {
+                return BonusType.LASER_GUN;
+            }
+        }
+
         if (availableBonuses.isEmpty()) {
             return null;
         }
