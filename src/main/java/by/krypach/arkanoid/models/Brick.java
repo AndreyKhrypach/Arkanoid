@@ -45,6 +45,15 @@ public class Brick {
             g.setColor(color);
             g.fillRect(x, y, width, height);
 
+            // Особый стиль для кирпича "EXIT"
+            if ("EXIT".equals(chessSymbol)) {
+                g.setColor(Color.YELLOW);
+                g.fillRect(x + 2, y + 2, width - 4, height - 4);
+                g.setColor(Color.BLACK);
+                g.setFont(new Font("Arial", Font.BOLD, 12));
+                g.drawString("EXIT", x + width/2 - 15, y + height/2 + 5);
+            }
+
             // Рисуем белую рамку
             g.setColor(Color.WHITE);
             g.drawRect(x, y, width, height);
@@ -68,21 +77,12 @@ public class Brick {
         return false;
     }
 
-    public void destroy() {
-        isDestroyed = true;
-    }
-
     public boolean isDestroyed() {
         return isDestroyed;
     }
 
     public boolean isAlive() {
         return !isDestroyed && currentHits < maxHits;
-    }
-
-    public void reset() {
-        this.isDestroyed = false;
-        this.currentHits = 0;
     }
 
     public int getRow() {

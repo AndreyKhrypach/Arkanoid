@@ -1,4 +1,5 @@
 package by.krypach.arkanoid.game;
+
 import by.krypach.arkanoid.models.Brick;
 
 import java.awt.*;
@@ -9,6 +10,7 @@ public class Level {
     private int levelNumber;
     private final List<Brick> bricks;
     private final boolean hasBonuses;
+    private boolean levelCompleted;
     private final Color backgroundColor;
 
     public Level(int levelNumber, List<Brick> bricks, boolean hasBonuses, Color backgroundColor) {
@@ -21,10 +23,6 @@ public class Level {
     // Геттеры для всех полей
     public int getLevelNumber() {
         return levelNumber;
-    }
-
-    public void setLevelNumber(int levelNumber) {
-        this.levelNumber = levelNumber;
     }
 
     public List<Brick> getBricks() {
@@ -41,5 +39,13 @@ public class Level {
 
     public boolean isCompleted() {
         return bricks.stream().noneMatch(Brick::isAlive);
+    }
+
+    public boolean isLevelCompleted() {
+        return levelCompleted;
+    }
+
+    public void setLevelCompleted(boolean levelCompleted) {
+        this.levelCompleted = levelCompleted;
     }
 }

@@ -67,7 +67,6 @@ public class Ball {
     public double getSpeedX() { return speedX; }
     public double getSpeedY() { return speedY; }
     public void setSpeedX(double speedX) { this.speedX = speedX; }
-    public void setSpeedY(double speedY) { this.speedY = speedY; }
     public int getSize() { return size; }
     public boolean isStuckToPaddle() { return isStuckToPaddle; }
     public void setStuckToPaddle(boolean stuckToPaddle) {
