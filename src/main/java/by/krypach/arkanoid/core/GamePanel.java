@@ -72,7 +72,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(2);
+        loadLevel(4);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -249,7 +249,7 @@ public class GamePanel extends JPanel implements KeyListener {
                 bonusManager.setCurrentDropChance(0.3);
                 break;
             case 3:
-                this.currentLevel = levelGenerator.generateLevel3();
+                this.currentLevel = levelGenerator.generateLevel(3, 5, 10, random);
                 bonusManager.setCurrentDropChance(0.5);
                 break;
             case 4:
