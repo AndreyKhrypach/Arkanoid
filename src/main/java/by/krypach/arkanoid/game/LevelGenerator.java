@@ -98,35 +98,6 @@ public class LevelGenerator {
         return new Level(1, bricks, false, Color.BLACK);
     }
 
-    public Level generateLevel3() {
-        List<Brick> bricks = new ArrayList<>();
-        int trapCounter = 0;
-
-        for (int row = 0; row < 5; row++) {
-            for (int col = 0; col < 10; col++) {
-                int x = col * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
-                int y = row * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
-
-                // Определяем прочность кирпича (1-5 ударов)
-                int maxHits = (row % 3) + 1; // Чередуем прочность
-
-                Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, maxHits, "");
-
-                // Каждый 4-й кирпич - ловушка
-                trapCounter++;
-                if (trapCounter % 4 == 0) {
-                    brick.setBonusType(BonusType.TRAP_SHRINK_PADDLE);
-                } else {
-                    brick.setBonusType(getRandomBonusType(3));
-                }
-
-                bricks.add(brick);
-            }
-        }
-
-        return new Level(3, bricks, true, new Color(30, 30, 70)); // Синий фон для уровня
-    }
-
     public Level generateChessLevel() {
         List<Brick> bricks = new ArrayList<>();
 
@@ -227,7 +198,13 @@ public class LevelGenerator {
 
     public BonusType getRandomBonusType(int levelNumber) {
         List<BonusType> availableBonuses = new ArrayList<>(Arrays.asList(BonusType.values()));
-        if (levelNumber != 3) {
+        if (levelNumber < 3) {
+            availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
+        } else {
+            // Начиная с 3 уровня, 20% шанс получить ловушку
+            if (random.nextDouble() < 0.25) {
+                return BonusType.TRAP_SHRINK_PADDLE;
+            }
             availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
         }
         if (availableBonuses.isEmpty()) {

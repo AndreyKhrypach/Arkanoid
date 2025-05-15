@@ -83,6 +83,7 @@ public class BonusManager {
     }
 
     private void applyBonusEffect(BonusType type, Paddle paddle, List<Ball> balls) {
+        gamePanel.addScore(5);
         switch (type) {
             case PADDLE_EXTEND -> {
                 int newWidth = Math.min(paddle.getWidth() + 20, Paddle.MAX_WIDTH);
