@@ -1,9 +1,18 @@
 package by.krypach.arkanoid.models;
 
+import by.krypach.arkanoid.core.GamePanel;
+
 import java.awt.*;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Paddle {
+    public static final int LASER_COOLDOWN_MS = 500; // Задержка между выстрелами (миллисекунды)
+    public static final int LASER_DURATION_MS = 10000; // Длительность активности лазера (10 сек)
+    public static final int LASER_BEAM_WIDTH = 3; // Ширина луча в пикселях
+    private static final Color LASER_COLOR = Color.RED; // Цвет луча
     public static final int MAX_WIDTH = 200;
+
     private static final int GAME_WIDTH = 800;
     private static final float ACCELERATION = 2.5f;
     private static final float DECELERATION = 1.8f;
@@ -15,6 +24,9 @@ public class Paddle {
     private final int height;
     private int maxXPosition;
     private float currentSpeed;
+    private boolean laserActive = false;
+    private long lastLaserShotTime = 0; // Время последнего выстрела
+    private final List<LaserBeam> laserBeams = new ArrayList<>();
 
     public Paddle(int x, int y, int width, int height) {
         this.preciseX = x;
@@ -28,6 +40,51 @@ public class Paddle {
     public void update(double deltaTime) {
         applyDeceleration();
         updatePosition(deltaTime);
+
+        long currentTime = System.currentTimeMillis();
+        laserBeams.removeIf(beam ->
+                currentTime - lastLaserShotTime > 100 &&
+                        beam.getHeight() == GamePanel.HEIGHT
+        );
+    }
+
+    public void activateLaser() {
+        this.laserActive = true;
+        this.laserBeams.clear();
+    }
+
+    public void deactivateLaser() {
+        this.laserActive = false;
+        this.laserBeams.clear();
+    }
+
+    public void fireLaser() {
+        if (laserActive && System.currentTimeMillis() - lastLaserShotTime >= LASER_COOLDOWN_MS) {
+            // Создаем луч с эффектом "искры" в начале
+            laserBeams.add(new LaserBeam(
+                    getX() + width/2 - LASER_BEAM_WIDTH/2,
+                    y - GamePanel.HEIGHT,
+                    LASER_BEAM_WIDTH,
+                    GamePanel.HEIGHT,
+                    LASER_COLOR
+            ));
+
+            // Добавляем небольшую искру в точке выстрела
+            int sparkSize = 8;
+            laserBeams.add(new LaserBeam(
+                    getX() + width/2 - sparkSize/2,
+                    y - sparkSize,
+                    sparkSize,
+                    sparkSize,
+                    new Color(255, 255, 100)
+            ));
+
+            lastLaserShotTime = System.currentTimeMillis();
+        }
+    }
+
+    public List<LaserBeam> getLaserBeams() {
+        return laserBeams;
     }
 
     private void applyDeceleration() {
@@ -51,6 +108,26 @@ public class Paddle {
     public void draw(Graphics g) {
         g.setColor(Color.GREEN);
         g.fillRect(getX(), y, width, height);
+
+        if (laserActive) {
+            g.setColor(Color.RED);
+            int laserIndicatorSize = 10;
+            int[] xPoints = {
+                    getX() + width/2 - laserIndicatorSize/2,
+                    getX() + width/2,
+                    getX() + width/2 + laserIndicatorSize/2
+            };
+            int[] yPoints = {y, y - laserIndicatorSize, y};
+            g.fillPolygon(xPoints, yPoints, 3);
+        }
+
+        // Отрисовка лазерных лучей
+        laserBeams.forEach(laser -> laser.draw(g));
+    }
+
+    public void clearLasers() {
+        laserBeams.clear();
+        laserActive = false;
     }
 
     public Rectangle getBounds() {

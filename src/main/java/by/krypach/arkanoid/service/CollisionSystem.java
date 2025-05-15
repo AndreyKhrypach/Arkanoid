@@ -4,6 +4,7 @@ import by.krypach.arkanoid.core.GamePanel;
 import by.krypach.arkanoid.enums.BonusType;
 import by.krypach.arkanoid.models.Ball;
 import by.krypach.arkanoid.models.Brick;
+import by.krypach.arkanoid.models.LaserBeam;
 import by.krypach.arkanoid.models.Paddle;
 
 import java.awt.*;
@@ -94,20 +95,46 @@ public class CollisionSystem {
             BonusType bonusType = brick.getBonusType();
             if (bonusType != null) {
                 if (brick.getBonusType().isTrap()) {
+                    // Ловушка: уменьшаем платформу на 30%
                     Paddle paddle = gamePanel.getPaddle();
                     paddle.setWidth((int)(paddle.getWidth() * 0.7));
                 } else {
+                    // Обычные бонусы
                     gamePanel.getBonusManager().spawnFromBrick(brick);
                 }
             }
-
             // Особый случай - выход из лабиринта
             if ("EXIT".equals(brick.getChessSymbol())) {
-                gamePanel.addScore(1000);
-                // Немедленно завершаем уровень
-                gamePanel.getCurrentLevel().setLevelCompleted(true);
-                gamePanel.checkWinCondition(); // Принудительно проверяем условие победы
+                gamePanel.addScore(1000); // Бонусные очки за выход
+                gamePanel.getCurrentLevel().setLevelCompleted(true); // Помечаем уровень завершенным
             }
         }
+    }
+    public void checkLaserCollisions() {
+        Iterator<LaserBeam> laserIter = gamePanel.getPaddle().getLaserBeams().iterator();
+        while (laserIter.hasNext()) {
+            LaserBeam laser = laserIter.next();
+
+            // Проверяем только "длинные" лучи (не искры)
+            if (laser.getHeight() == GamePanel.HEIGHT) {
+                for (Brick brick : gamePanel.getBricks()) {
+                    if (brick.isAlive() && laser.getBounds().intersects(brick.getBounds())) {
+                        brick.hit();
+                        gamePanel.addScore(gamePanel.calculateScoreForBrick(brick));
+                        // Создаем эффект попадания
+                        createHitEffect(brick);
+                        break;
+                    }
+                }
+            } else {
+                // Удаляем искры после проверки
+                laserIter.remove();
+            }
+        }
+    }
+
+    private void createHitEffect(Brick brick) {
+        // Можно добавить эффекты при попадании (например, частицы)
+        // Это можно реализовать через систему частиц в GamePanel
     }
 }
