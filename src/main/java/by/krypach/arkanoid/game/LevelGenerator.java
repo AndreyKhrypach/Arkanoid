@@ -201,7 +201,7 @@ public class LevelGenerator {
 
         if (levelNumber < 3) {
             availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
-        } else if (levelNumber < 6) {
+        } else if (levelNumber > 3) {
             if (random.nextDouble() < 0.25) {
                 return BonusType.TRAP_SHRINK_PADDLE;
             }
