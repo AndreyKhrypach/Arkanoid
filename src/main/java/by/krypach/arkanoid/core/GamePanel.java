@@ -4,6 +4,7 @@ import by.krypach.arkanoid.game.Level;
 import by.krypach.arkanoid.game.LevelGenerator;
 import by.krypach.arkanoid.models.Ball;
 import by.krypach.arkanoid.models.Brick;
+import by.krypach.arkanoid.models.LaserBeam;
 import by.krypach.arkanoid.models.Paddle;
 import by.krypach.arkanoid.service.BonusManager;
 import by.krypach.arkanoid.service.CollisionSystem;
@@ -66,14 +67,15 @@ public class GamePanel extends JPanel implements KeyListener {
                 WIDTH / 2 - PADDLE_INITIAL_WIDTH / 2,
                 HEIGHT - 50,
                 PADDLE_INITIAL_WIDTH,
-                20
+                20,
+                this
         );
         this.initialPaddleWidth = paddle.getWidth();
 
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(1);
+        loadLevel(6);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -87,7 +89,9 @@ public class GamePanel extends JPanel implements KeyListener {
             bonusManager.update(deltaTime);
             bonusManager.checkCollisions(paddle, balls);
         }
-        if (laserActive) {
+
+        // Проверяем коллизии лазера только если есть активные лучи
+        if (!paddle.getLaserBeams().isEmpty()) {
             collisionSystem.checkLaserCollisions();
         }
 
@@ -180,6 +184,11 @@ public class GamePanel extends JPanel implements KeyListener {
     public List<Ball> getBalls() { return balls; }
     public List<Brick> getBricks() { return bricks; }
     public BonusManager getBonusManager() { return bonusManager; }
+
+    public CollisionSystem getCollisionSystem() {
+        return collisionSystem;
+    }
+
     public int getCurrentLevelNumber() { return currentLevel.getLevelNumber(); }
     public int getLives() { return lives; }
     public int getScore() { return score; }
@@ -228,6 +237,9 @@ public class GamePanel extends JPanel implements KeyListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         renderSystem.render(g);
+        for (LaserBeam laser : paddle.getLaserBeams()) {
+            laser.draw(g);
+        }
     }
 
     private void setupInput() {
