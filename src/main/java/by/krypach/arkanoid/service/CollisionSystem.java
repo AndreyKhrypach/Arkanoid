@@ -110,30 +110,52 @@ public class CollisionSystem {
             }
         }
     }
+
     public void checkLaserCollisions() {
         Iterator<LaserBeam> laserIter = gamePanel.getPaddle().getLaserBeams().iterator();
         while (laserIter.hasNext()) {
             LaserBeam laser = laserIter.next();
 
-            // Проверяем только "длинные" лучи (не искры)
-            if (laser.getHeight() == GamePanel.HEIGHT) {
-                for (Brick brick : gamePanel.getBricks()) {
-                    if (brick.isAlive() && laser.getBounds().intersects(brick.getBounds())) {
-                        brick.hit();
-                        gamePanel.addScore(gamePanel.calculateScoreForBrick(brick));
-                        // Создаем эффект попадания
-                        createHitEffect(brick);
-                        break;
+            // Находим ближайший кирпич
+            Brick closestBrick = null;
+            int maxY = 0;
+
+            for (Brick brick : gamePanel.getBricks()) {
+                if (brick.isAlive() &&
+                        laser.getX() >= brick.getX() &&
+                        laser.getX() <= brick.getX() + brick.getWidth()) {
+
+                    if (brick.getY() > maxY) {
+                        maxY = brick.getY();
+                        closestBrick = brick;
                     }
                 }
+            }
+
+            if (closestBrick != null) {
+                // Устанавливаем высоту луча
+                laser.setHeight(laser.getY() - closestBrick.getY());
+
+                // Наносим урон только один раз при первом обнаружении
+                if (!laser.isHitProcessed()) {
+                    closestBrick.hit();
+                    gamePanel.addScore(gamePanel.calculateScoreForBrick(closestBrick));
+                    createHitEffect(closestBrick);
+                    laser.setHitProcessed(); // Помечаем, что попадание обработано
+                }
             } else {
-                // Удаляем искры после проверки
+                // Если кирпичей нет - луч до потолка
+                laser.setHeight(laser.getY());
+            }
+
+            // Удаляем луч, когда время жизни истекло
+            if (!laser.isAlive()) {
                 laserIter.remove();
             }
         }
     }
 
-    private void createHitEffect(Brick brick) {
+    public void createHitEffect(Brick brick) {
         // Можно добавить эффекты при попадании (например, частицы)
         // Это можно реализовать через систему частиц в GamePanel
     }

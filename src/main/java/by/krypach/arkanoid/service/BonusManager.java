@@ -7,9 +7,6 @@ import by.krypach.arkanoid.enums.BonusType;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
-import javax.swing.Timer;
-
-import static by.krypach.arkanoid.models.Paddle.LASER_DURATION_MS;
 
 public class BonusManager {
 
@@ -125,12 +122,8 @@ public class BonusManager {
             }
             case LASER_GUN -> {
                 paddle.activateLaser();
+                paddle.addLaserShots(5);
                 gamePanel.setLaserActive(true);
-                // Таймер для автоматического отключения лазера через 10 сек
-                new Timer(LASER_DURATION_MS, e -> {
-                    paddle.deactivateLaser();
-                    gamePanel.setLaserActive(false);
-                }).start();
             }
         }
     }
