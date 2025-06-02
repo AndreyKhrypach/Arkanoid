@@ -2,10 +2,7 @@ package by.krypach.arkanoid.core;
 
 import by.krypach.arkanoid.game.Level;
 import by.krypach.arkanoid.game.LevelGenerator;
-import by.krypach.arkanoid.models.Ball;
-import by.krypach.arkanoid.models.Brick;
-import by.krypach.arkanoid.models.LaserBeam;
-import by.krypach.arkanoid.models.Paddle;
+import by.krypach.arkanoid.models.*;
 import by.krypach.arkanoid.service.BonusManager;
 import by.krypach.arkanoid.service.CollisionSystem;
 import by.krypach.arkanoid.service.RenderSystem;
@@ -38,6 +35,8 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean lifeAnimationActive = false;
     private Color lifeAnimationColor = Color.BLACK;
     private boolean laserActive = false;
+    private boolean controlsInverted = false;
+    private long controlsInvertedEndTime = 0;
 
     // models
     private final Paddle paddle;
@@ -46,6 +45,7 @@ public class GamePanel extends JPanel implements KeyListener {
     private final CollisionSystem collisionSystem;
     private final List<Brick> bricks = new ArrayList<>();
     private final List<Ball> balls = new ArrayList<>();
+    private final List<LaserBeam> bossLasers = new ArrayList<>();
 
     // Input
     private boolean leftPressed = false;
@@ -61,7 +61,7 @@ public class GamePanel extends JPanel implements KeyListener {
 
     public GamePanel() {
         this.bonusManager = new BonusManager(this); // 20% шанс выпадения
-        this.levelGenerator = new LevelGenerator();
+        this.levelGenerator = new LevelGenerator(this);
         this.balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 0, 0));
         this.paddle = new Paddle(
                 WIDTH / 2 - PADDLE_INITIAL_WIDTH / 2,
@@ -75,7 +75,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(6);
+        loadLevel(1);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -83,6 +83,14 @@ public class GamePanel extends JPanel implements KeyListener {
 
     public void update(double deltaTime) {
         if (!isRunning || isPaused) return;
+
+        if (controlsInverted && System.currentTimeMillis() > controlsInvertedEndTime) {
+            controlsInverted = false;
+        }
+
+        if (!bossLasers.isEmpty()) {
+            collisionSystem.checkBossLaserCollisions();
+        }
 
         if (currentLevel.hasBonuses()) {
             bonusManager.timeSlowEffect(deltaTime);
@@ -120,16 +128,28 @@ public class GamePanel extends JPanel implements KeyListener {
                     paddle.fireLaser();
                 }
             }
-            case KeyEvent.VK_LEFT -> leftPressed = true;
-            case KeyEvent.VK_RIGHT -> rightPressed = true;
+            case KeyEvent.VK_LEFT -> {
+                if (controlsInverted) rightPressed = true;
+                else leftPressed = true;
+            }
+            case KeyEvent.VK_RIGHT -> {
+                if (controlsInverted) leftPressed = true;
+                else rightPressed = true;
+            }
         }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_LEFT -> leftPressed = false;
-            case KeyEvent.VK_RIGHT -> rightPressed = false;
+            case KeyEvent.VK_LEFT -> {
+                if (controlsInverted) rightPressed = false;
+                else leftPressed = false;
+            }
+            case KeyEvent.VK_RIGHT -> {
+                if (controlsInverted) leftPressed = false;
+                else rightPressed = false;
+            }
         }
     }
 
@@ -166,6 +186,37 @@ public class GamePanel extends JPanel implements KeyListener {
 
         if (currentLevel.isCompleted() || currentLevel.isLevelCompleted()) {
             showLevelComplete();
+        }
+    }
+
+    public void invertControls(long durationMillis) {
+        this.controlsInverted = true;
+        this.controlsInvertedEndTime = System.currentTimeMillis() + durationMillis;
+
+        // Визуальная индикация эффекта
+        animateControlInversion();
+    }
+
+    public void animateTeleportEffect() {
+        new Thread(() -> {
+            for (int i = 0; i < 3; i++) {
+                setBackground(Color.CYAN);
+                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                setBackground(getCurrentLevel().getBackgroundColor());
+                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+            }
+        }).start();
+    }
+
+    public void loseLife() {
+        lives--;
+        deathAnimationCounter = 10;
+
+        if (lives <= 0) {
+            isRunning = false;
+            new Timer(500, e -> repaint()).start();
+        } else {
+            resetAfterDeath();
         }
     }
 
@@ -233,11 +284,26 @@ public class GamePanel extends JPanel implements KeyListener {
         this.laserActive = laserActive;
     }
 
+    public boolean isControlsInverted() {
+        return controlsInverted;
+    }
+
+    public long getControlsInvertedEndTime() {
+        return controlsInvertedEndTime;
+    }
+
+    public List<LaserBeam> getBossLasers() {
+        return bossLasers;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         renderSystem.render(g);
         for (LaserBeam laser : paddle.getLaserBeams()) {
+            laser.draw(g);
+        }
+        for (LaserBeam laser : bossLasers) { // Отрисовываем лазеры босса
             laser.draw(g);
         }
     }
@@ -262,6 +328,7 @@ public class GamePanel extends JPanel implements KeyListener {
         bonusManager.clear();
         levelTransitionInProgress = false;
         paddle.getLaserBeams().clear();
+        bossLasers.clear();
 
         switch(levelNumber) {
             case 1:
@@ -283,6 +350,14 @@ public class GamePanel extends JPanel implements KeyListener {
             case 5:  // Новый уровень-лабиринт
                 this.currentLevel = levelGenerator.generateMazeLevel();
                 bonusManager.setCurrentDropChance(0.6);  // Больше бонусов в лабиринте
+                break;
+            case 6:
+                this.currentLevel = levelGenerator.generateLevel(6, 5, 10, random);
+                bonusManager.setCurrentDropChance(0.5);
+                break;
+            case 7:
+                this.currentLevel = levelGenerator.generateBossLevel();
+                bonusManager.setCurrentDropChance(0.5);
                 break;
             default:
                 this.currentLevel = levelGenerator.generateLevel(levelNumber, 5, 10, random);
@@ -421,18 +496,6 @@ public class GamePanel extends JPanel implements KeyListener {
         }
     }
 
-    private void loseLife() {
-        lives--;
-        deathAnimationCounter = 10;
-
-        if (lives <= 0) {
-            isRunning = false;
-            new Timer(500, e -> repaint()).start();
-        } else {
-            resetAfterDeath();
-        }
-    }
-
     private void resetAfterDeath() {
         balls.clear();
         Ball ball = new Ball(
@@ -448,5 +511,17 @@ public class GamePanel extends JPanel implements KeyListener {
         paddle.setCurrentSpeed(0);
         paddle.clearLasers();
         laserActive = false;
+    }
+
+    private void animateControlInversion() {
+        new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                setBackground(i % 2 == 0 ? Color.RED : Color.BLACK);
+                try {
+                    Thread.sleep(150);
+                } catch (InterruptedException ignored) {}
+            }
+            setBackground(getCurrentLevel().getBackgroundColor());
+        }).start();
     }
 }

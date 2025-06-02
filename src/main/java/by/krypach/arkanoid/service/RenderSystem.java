@@ -130,6 +130,13 @@ public class RenderSystem {
         renderHUD(g);
         renderGameState(g);
         renderBorders(g);
+
+        if (gamePanel.isControlsInverted()) {
+            long remaining = (gamePanel.getControlsInvertedEndTime() - System.currentTimeMillis()) / 1000;
+            g.setColor(Color.RED);
+            g.setFont(new Font("Arial", Font.BOLD, 16));
+            g.drawString("Инверсия: " + remaining + "s", 20, HEIGHT - 20);
+        }
     }
 
     private void renderHUD(Graphics g) {
