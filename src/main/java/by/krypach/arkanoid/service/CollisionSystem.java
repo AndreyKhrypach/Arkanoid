@@ -2,10 +2,7 @@ package by.krypach.arkanoid.service;
 
 import by.krypach.arkanoid.core.GamePanel;
 import by.krypach.arkanoid.enums.BonusType;
-import by.krypach.arkanoid.models.Ball;
-import by.krypach.arkanoid.models.Brick;
-import by.krypach.arkanoid.models.LaserBeam;
-import by.krypach.arkanoid.models.Paddle;
+import by.krypach.arkanoid.models.*;
 
 import java.awt.*;
 import java.util.*;
@@ -71,6 +68,31 @@ public class CollisionSystem {
         Rectangle brickRect = brick.getBounds();
         Rectangle intersection = ballRect.intersection(brickRect);
 
+        // Обрабатываем столкновение с боссом
+        if (brick instanceof BossBrick) {
+            // Определяем направление отскока
+            if (intersection.width > intersection.height) {
+                if (ballRect.y < brickRect.y) {
+                    ball.setY(brickRect.y - ball.getSize());
+                } else {
+                    ball.setY(brickRect.y + brickRect.height);
+                }
+                ball.reverseY();
+            } else {
+                if (ballRect.x < brickRect.x) {
+                    ball.setX(brickRect.x - ball.getSize());
+                } else {
+                    ball.setX(brickRect.x + brickRect.width);
+                }
+                ball.reverseX();
+            }
+
+            // Затем обрабатываем попадание (эффекты и урон)
+            brick.hit();
+            return;
+        }
+
+        // Обычные кирпичи
         if (intersection.width > intersection.height) {
             if (ballRect.y < brickRect.y) {
                 ball.setY(brickRect.y - ball.getSize());
@@ -95,18 +117,15 @@ public class CollisionSystem {
             BonusType bonusType = brick.getBonusType();
             if (bonusType != null) {
                 if (brick.getBonusType().isTrap()) {
-                    // Ловушка: уменьшаем платформу на 30%
                     Paddle paddle = gamePanel.getPaddle();
-                    paddle.setWidth((int)(paddle.getWidth() * 0.7));
+                    paddle.setWidth((int) (paddle.getWidth() * 0.7));
                 } else {
-                    // Обычные бонусы
                     gamePanel.getBonusManager().spawnFromBrick(brick);
                 }
             }
-            // Особый случай - выход из лабиринта
             if ("EXIT".equals(brick.getChessSymbol())) {
-                gamePanel.addScore(1000); // Бонусные очки за выход
-                gamePanel.getCurrentLevel().setLevelCompleted(true); // Помечаем уровень завершенным
+                gamePanel.addScore(1000);
+                gamePanel.getCurrentLevel().setLevelCompleted(true);
             }
         }
     }
@@ -116,39 +135,67 @@ public class CollisionSystem {
         while (laserIter.hasNext()) {
             LaserBeam laser = laserIter.next();
 
-            // Находим ближайший кирпич
-            Brick closestBrick = null;
-            int maxY = 0;
-
-            for (Brick brick : gamePanel.getBricks()) {
-                if (brick.isAlive() &&
-                        laser.getX() >= brick.getX() &&
-                        laser.getX() <= brick.getX() + brick.getWidth()) {
-
-                    if (brick.getY() > maxY) {
-                        maxY = brick.getY();
-                        closestBrick = brick;
+            // Проверка столкновения с боссом (если это уровень с боссом)
+            if (gamePanel.getCurrentLevelNumber() == 7) {  // Изменил с 6 на 7, так как босс на 7 уровне
+                for (Brick brick : gamePanel.getBricks()) {
+                    if (brick instanceof BossBrick boss && boss.isAlive()) {
+                        if (new Rectangle(laser.getX(), laser.getY() - laser.getHeight(),
+                                laser.getWidth(), laser.getHeight()).intersects(boss.getBounds())) {
+                            boss.hit();
+                            laser.setHitProcessed();
+                            break;
+                        }
                     }
                 }
             }
 
-            if (closestBrick != null) {
-                // Устанавливаем высоту луча
-                laser.setHeight(laser.getY() - closestBrick.getY());
-
-                // Наносим урон только один раз при первом обнаружении
-                if (!laser.isHitProcessed()) {
-                    closestBrick.hit();
-                    gamePanel.addScore(gamePanel.calculateScoreForBrick(closestBrick));
-                    createHitEffect(closestBrick);
-                    laser.setHitProcessed(); // Помечаем, что попадание обработано
-                }
-            } else {
-                // Если кирпичей нет - луч до потолка
-                laser.setHeight(laser.getY());
+            // Проверка столкновения с платформой игрока
+            Paddle paddle = gamePanel.getPaddle();
+            if (new Rectangle(laser.getX(), laser.getY() - laser.getHeight(),
+                    laser.getWidth(), laser.getHeight()).intersects(paddle.getBounds())) {
+                gamePanel.loseLife();
+                laser.setHitProcessed();
             }
 
-            // Удаляем луч, когда время жизни истекло
+            if (!laser.isDownward()) {
+                Brick closestBrick = getClosestBrick(laser);
+
+                if (closestBrick != null) {
+                    laser.setHeight(laser.getY() - closestBrick.getY());
+                    if (!laser.isHitProcessed()) {
+                        closestBrick.hit();
+                        gamePanel.addScore(gamePanel.calculateScoreForBrick(closestBrick));
+                        createHitEffect(closestBrick);
+                        laser.setHitProcessed();
+                    }
+                } else {
+                    laser.setHeight(laser.getY());
+                }
+            }
+
+            if (!laser.isAlive()) {
+                laserIter.remove();
+            }
+        }
+    }
+
+    public void checkBossLaserCollisions() {
+        Iterator<LaserBeam> laserIter = gamePanel.getBossLasers().iterator();
+        while (laserIter.hasNext()) {
+            LaserBeam laser = laserIter.next();
+
+            // Проверка столкновения с платформой игрока
+            if (laser.isDownward()) { // Только для лучей, направленных вниз
+                Paddle paddle = gamePanel.getPaddle();
+                Rectangle laserRect = new Rectangle(laser.getX(), laser.getY(),
+                        laser.getWidth(), laser.getHeight());
+
+                if (laserRect.intersects(paddle.getBounds())) {
+                    gamePanel.loseLife();
+                    laser.setHitProcessed();
+                }
+            }
+
             if (!laser.isAlive()) {
                 laserIter.remove();
             }
@@ -158,5 +205,23 @@ public class CollisionSystem {
     public void createHitEffect(Brick brick) {
         // Можно добавить эффекты при попадании (например, частицы)
         // Это можно реализовать через систему частиц в GamePanel
+    }
+
+    private Brick getClosestBrick(LaserBeam laser) {
+        Brick closestBrick = null;
+        int maxY = 0;
+
+        for (Brick brick : gamePanel.getBricks()) {
+            if (brick.isAlive() &&
+                    laser.getX() >= brick.getX() &&
+                    laser.getX() <= brick.getX() + brick.getWidth()) {
+
+                if (brick.getY() > maxY) {
+                    maxY = brick.getY();
+                    closestBrick = brick;
+                }
+            }
+        }
+        return closestBrick;
     }
 }
