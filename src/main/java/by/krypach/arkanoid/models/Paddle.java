@@ -8,9 +8,7 @@ import java.util.ArrayList;
 
 public class Paddle {
     public static final int LASER_COOLDOWN_MS = 500; // Задержка между выстрелами (миллисекунды)
-    public static final int LASER_DURATION_MS = 10000; // Длительность активности лазера (10 сек)
     public static final int LASER_BEAM_WIDTH = 3; // Ширина луча в пикселях
-    private static final Color LASER_COLOR = Color.RED; // Цвет луча
     public static final int MAX_WIDTH = 200;
 
     private static final int GAME_WIDTH = 800;
@@ -71,7 +69,8 @@ public class Paddle {
                     y,
                     LASER_BEAM_WIDTH,
                     0,
-                    LASER_COLOR
+                    Color.BLUE,
+                    false
             );
 
             // Сразу находим и обрабатываем попадание

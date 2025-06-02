@@ -1,19 +1,23 @@
 package by.krypach.arkanoid.game;
 
+import by.krypach.arkanoid.core.GamePanel;
 import by.krypach.arkanoid.enums.BonusType;
+import by.krypach.arkanoid.models.BossBrick;
 import by.krypach.arkanoid.models.Brick;
 
 import java.awt.*;
 import java.util.*;
 import java.util.List;
 
+import static by.krypach.arkanoid.core.GamePanel.WIDTH;
+
 public class LevelGenerator {
+    public static final int BRICK_TOP_MARGIN = 50;
+    public static final int BRICK_LEFT_MARGIN = 10;
     private static final int BRICK_WIDTH = 70;
     private static final int BRICK_HEIGHT = 20;
     private static final int BRICK_HGAP = 10;
     private static final int BRICK_VGAP = 10;
-    private static final int BRICK_TOP_MARGIN = 50;
-    private static final int BRICK_LEFT_MARGIN = 10;
     // Черные фигуры (стандартные Unicode)
     public static final String BLACK_KING = "♔";
     public static final String BLACK_QUEEN = "♕";
@@ -30,6 +34,11 @@ public class LevelGenerator {
     public static final String WHITE_KNIGHT = "♞";
     public static final String WHITE_PAWN = "♟";
     private final Random random = new Random();
+    private final GamePanel gamePanel;
+
+    public LevelGenerator(GamePanel gamePanel) {
+        this.gamePanel = gamePanel;
+    }
 
     public Level generateLevel(int levelNumber, int rows, int cols, Random random) {
         List<Brick> bricks = new ArrayList<>();
@@ -182,6 +191,32 @@ public class LevelGenerator {
         bricks.add(exitBrick);
 
         return new Level(5, bricks, true, new Color(20, 20, 40)); // Темно-синий фон
+    }
+
+    public Level generateBossLevel() {
+        List<Brick> bricks = new ArrayList<>();
+
+        // Создаем босса в центре верхней части экрана
+        int bossX = WIDTH/2 - BossBrick.BOSS_WIDTH/2;
+        int bossY = BRICK_TOP_MARGIN;
+
+        BossBrick boss = new BossBrick(bossX, bossY, gamePanel);
+        bricks.add(boss);
+
+        // Добавляем защитный ряд из 6 кирпичей под боссом
+        int defenseRowY = bossY + BossBrick.BOSS_HEIGHT + BRICK_VGAP;
+        int defenseBrickCount = 6;
+        int totalDefenseWidth = defenseBrickCount * BRICK_WIDTH + (defenseBrickCount - 1) * BRICK_HGAP;
+        int defenseStartX = WIDTH/2 - totalDefenseWidth/2;
+
+        for (int i = 0; i < defenseBrickCount; i++) {
+            int x = defenseStartX + i * (BRICK_WIDTH + BRICK_HGAP);
+            Brick brick = new Brick(x, defenseRowY, BRICK_WIDTH, BRICK_HEIGHT, 1, 3, "");
+            brick.setBonusType(getRandomBonusType(6));
+            bricks.add(brick);
+        }
+
+        return new Level(7, bricks, true, new Color(30, 0, 0)); // Темно-красный фон
     }
 
     // Возвращает цвет по количеству ударов (как в текущей системе)

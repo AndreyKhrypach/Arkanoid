@@ -5,13 +5,13 @@ import by.krypach.arkanoid.enums.BonusType;
 import java.awt.*;
 
 public class Brick {
-    private final int x, y;
+    protected int x, y;
     private final int width, height;
     private final int row;
-    private boolean isDestroyed;
+    protected boolean isDestroyed;
     private Color color;
-    private int maxHits;
-    private int currentHits;
+    protected int maxHits;
+    protected int currentHits;
     private BonusType bonusType;
     private String chessSymbol;
 
@@ -125,7 +125,15 @@ public class Brick {
         return chessSymbol;
     }
 
-    private void updateColor() {
+    public int getCurrentHits() {
+        return currentHits;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    protected void updateColor() {
         int hitsLeft = maxHits - currentHits;
         int colorIndex = Math.max(0, Math.min(hitsLeft - 1, HIT_COLORS.length - 1));
         this.color = HIT_COLORS[colorIndex];

@@ -7,13 +7,15 @@ public class LaserBeam {
     private long spawnTime; // Время создания луча
     private final long durationMs = 50; // Длительность отображения в миллисекундах
     private boolean hitProcessed = false; // Флаг, что попадание уже обработано
+    private final boolean isDownward;
 
-    public LaserBeam(int x, int y, int width, int height, Color color) {
+    public LaserBeam(int x, int y, int width, int height, Color color, boolean isDownward) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.color = color;
+        this.isDownward = isDownward;
         this.spawnTime = System.currentTimeMillis();
     }
 
@@ -21,24 +23,40 @@ public class LaserBeam {
         if (height <= 0) return;
 
         Graphics2D g2d = (Graphics2D)g;
-
-        // Сохраняем оригинальные настройки
         Object oldAntialias = g2d.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         // Яркое ядро луча
         g2d.setColor(new Color(255, 50, 50, 200));
-        g2d.fillRect(x, y - height, width, height);
+        if (isDownward) {
+            // Луч вниз (от босса)
+            g2d.fillRect(x, y, width, height);
+        } else {
+            // Луч вверх (от платформы)
+            g2d.fillRect(x, y - height, width, height);
+        }
 
         // Внешнее свечение
-        GradientPaint gradient = new GradientPaint(
-                x, y - height, new Color(255, 100, 100, 100),
-                x, y, new Color(255, 100, 100, 50)
-        );
-        g2d.setPaint(gradient);
-        g2d.fillRect(x - 2, y - height, width + 4, height);
+        GradientPaint gradient;
+        if (isDownward) {
+            gradient = new GradientPaint(
+                    x, y, new Color(255, 100, 100, 100),
+                    x, y + height, new Color(255, 100, 100, 50)
+            );
+        } else {
+            gradient = new GradientPaint(
+                    x, y - height, new Color(255, 100, 100, 100),
+                    x, y, new Color(255, 100, 100, 50)
+            );
+        }
 
-        // Восстанавливаем настройки
+        g2d.setPaint(gradient);
+        if (isDownward) {
+            g2d.fillRect(x - 2, y, width + 4, height);
+        } else {
+            g2d.fillRect(x - 2, y - height, width + 4, height);
+        }
+
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, oldAntialias);
     }
 
@@ -48,6 +66,10 @@ public class LaserBeam {
 
     public int getHeight() {
         return height;
+    }
+
+    public int getWidth() {
+        return width;
     }
 
     public int getX() {
@@ -76,6 +98,10 @@ public class LaserBeam {
 
     public boolean isHitProcessed() {
         return hitProcessed;
+    }
+
+    public boolean isDownward() {
+        return isDownward;
     }
 
     public void setHitProcessed() {
