@@ -75,7 +75,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(1);
+        loadLevel(5);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -440,12 +440,12 @@ public class GamePanel extends JPanel implements KeyListener {
     private void checkCollisions() {
         collisionSystem.checkWallCollisions(balls, random);
         collisionSystem.checkPaddleCollision(balls, paddle);
+        collisionSystem.checkBallCollisions(balls);
     }
 
     private void showLevelComplete() {
         if (levelTransitionInProgress) return;
 
-        // Сначала показываем сообщение
         currentLevel.setLevelCompleted(true);
         isPaused = true;
         repaint();
@@ -453,13 +453,12 @@ public class GamePanel extends JPanel implements KeyListener {
         paddle.getLaserBeams().clear();
         laserActive = false;
 
-        // Затем через небольшой таймер начинаем переход
         Timer showMessageTimer = new Timer(1000, e -> {
             levelTransitionInProgress = true;
             balls.clear();
 
             if (currentLevel.getLevelNumber() < 10) {
-                int nextLevel = currentLevel.getLevelNumber() + 1;
+                int nextLevel = getNextLevelNumber(currentLevel.getLevelNumber());
                 loadLevel(nextLevel);
 
                 if (nextLevel == 5) {
@@ -475,6 +474,18 @@ public class GamePanel extends JPanel implements KeyListener {
         });
         showMessageTimer.setRepeats(false);
         showMessageTimer.start();
+    }
+
+    private int getNextLevelNumber(int currentLevel) {
+        // Специальная последовательность уровней
+        return switch (currentLevel) {
+            case 3 -> 4;  // После 3 обычного уровня идет 4 (шахматы)
+            case 4 -> 5;  // После шахмат идет лабиринт
+            case 5 -> 6;  // После лабиринта идет 6 обычный
+            case 6 -> 7;  // После 6 обычного идет босс
+            case 7 -> 8;  // После босса продолжаем обычные уровни
+            default -> currentLevel + 1;  // Для остальных случаев просто +1
+        };
     }
 
     private void gameComplete() {

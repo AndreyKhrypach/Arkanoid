@@ -68,9 +68,8 @@ public class CollisionSystem {
         Rectangle brickRect = brick.getBounds();
         Rectangle intersection = ballRect.intersection(brickRect);
 
-        // Обрабатываем столкновение с боссом
+        // Обработка столкновения с боссом (оставляем без изменений)
         if (brick instanceof BossBrick) {
-            // Определяем направление отскока
             if (intersection.width > intersection.height) {
                 if (ballRect.y < brickRect.y) {
                     ball.setY(brickRect.y - ball.getSize());
@@ -86,14 +85,13 @@ public class CollisionSystem {
                 }
                 ball.reverseX();
             }
-
-            // Затем обрабатываем попадание (эффекты и урон)
             brick.hit();
             return;
         }
 
-        // Обычные кирпичи
+       // Простая и надежная проверка направления столкновения
         if (intersection.width > intersection.height) {
+            // Вертикальное столкновение
             if (ballRect.y < brickRect.y) {
                 ball.setY(brickRect.y - ball.getSize());
             } else {
@@ -101,6 +99,7 @@ public class CollisionSystem {
             }
             ball.reverseY();
         } else {
+            // Горизонтальное столкновение
             if (ballRect.x < brickRect.x) {
                 ball.setX(brickRect.x - ball.getSize());
             } else {
@@ -109,6 +108,7 @@ public class CollisionSystem {
             ball.reverseX();
         }
 
+        // Обработка попадания в кирпич (без изменений)
         boolean wasAlive = brick.isAlive();
         boolean wasDestroyed = brick.hit();
 
@@ -205,6 +205,24 @@ public class CollisionSystem {
     public void createHitEffect(Brick brick) {
         // Можно добавить эффекты при попадании (например, частицы)
         // Это можно реализовать через систему частиц в GamePanel
+    }
+
+    public void checkBallCollisions(List<Ball> balls) {
+        for (Ball ball : balls) {
+            if (ball.isStuckToPaddle()) continue;
+
+            // Проверяем все кирпичи для каждого мяча
+            for (Brick brick : gamePanel.getBricks()) {
+                if (brick.isAlive() && ball.getBounds().intersects(brick.getBounds())) {
+                    handleBrickCollision(ball, brick);
+                    break; // Обрабатываем только одно столкновение за кадр
+                }
+            }
+
+            // Затем проверяем другие столкновения (стены, платформа)
+            checkWallCollisions(Collections.singletonList(ball), new Random());
+            checkPaddleCollision(Collections.singletonList(ball), gamePanel.getPaddle());
+        }
     }
 
     private Brick getClosestBrick(LaserBeam laser) {
