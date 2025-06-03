@@ -1,5 +1,6 @@
 package by.krypach.arkanoid.models;
 import java.awt.*;
+import java.util.Random;
 
 public class Ball {
     public static final double MAX_SPEED = 600.0;
@@ -14,6 +15,7 @@ public class Ball {
     private boolean isStuckToPaddle = true;
     private Color color = Color.WHITE;
     private double speedMultiplier = 1.0;
+    private final Random random = new Random();
 
     public Ball(int x, int y, double speedX, double speedY) {
         this.x = x;
@@ -30,9 +32,14 @@ public class Ball {
 
             updateColorBasedOnBoost();
 
+            // Сохраняем старую позицию
+            double oldX = x;
+            double oldY = y;
+
             double effectiveSpeedX = speedX * speedMultiplier;
             double effectiveSpeedY = speedY * speedMultiplier;
 
+            // Ограничиваем максимальную скорость
             double currentSpeed = Math.sqrt(effectiveSpeedX*effectiveSpeedX + effectiveSpeedY*effectiveSpeedY);
             if (currentSpeed > MAX_SPEED) {
                 double ratio = MAX_SPEED / currentSpeed;
@@ -40,8 +47,19 @@ public class Ball {
                 effectiveSpeedY *= ratio;
             }
 
+            // Обновляем позицию
             x += effectiveSpeedX * deltaTime;
             y += effectiveSpeedY * deltaTime;
+
+            // Предотвращаем застревание при очень малых скоростях
+            if (Math.abs(effectiveSpeedX) < 5 && Math.abs(effectiveSpeedY) < 5) {
+                x = oldX;
+                y = oldY;
+                setSpeed(
+                        speedX + (random.nextBoolean() ? 10 : -10),
+                        speedY + (random.nextBoolean() ? 10 : -10)
+                );
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import by.krypach.arkanoid.core.GamePanel;
 import by.krypach.arkanoid.enums.BonusType;
 import by.krypach.arkanoid.models.BossBrick;
 import by.krypach.arkanoid.models.Brick;
+import by.krypach.arkanoid.models.IndestructibleBrick;
 
 import java.awt.*;
 import java.util.*;
@@ -14,10 +15,11 @@ import static by.krypach.arkanoid.core.GamePanel.WIDTH;
 public class LevelGenerator {
     public static final int BRICK_TOP_MARGIN = 50;
     public static final int BRICK_LEFT_MARGIN = 10;
-    private static final int BRICK_WIDTH = 70;
-    private static final int BRICK_HEIGHT = 20;
-    private static final int BRICK_HGAP = 10;
-    private static final int BRICK_VGAP = 10;
+    private static final int TARGET_COLS = 10;  // Желаемое количество столбцов
+    private static final int BRICK_HGAP = 3;
+    private static final int BRICK_VGAP = 6;
+    private static final int BRICK_WIDTH = (GamePanel.WIDTH - 2*BRICK_LEFT_MARGIN - (TARGET_COLS-1)*BRICK_HGAP) / TARGET_COLS;
+    private static final int BRICK_HEIGHT =  (int)(BRICK_WIDTH * 0.37);
     // Черные фигуры (стандартные Unicode)
     public static final String BLACK_KING = "♔";
     public static final String BLACK_QUEEN = "♕";
@@ -25,7 +27,6 @@ public class LevelGenerator {
     public static final String BLACK_BISHOP = "♗";
     public static final String BLACK_KNIGHT = "♘";
     public static final String BLACK_PAWN = "♙";
-
     // Белые фигуры (используем другие Unicode символы)
     public static final String WHITE_KING = "♚";
     public static final String WHITE_QUEEN = "♛";
@@ -33,6 +34,7 @@ public class LevelGenerator {
     public static final String WHITE_BISHOP = "♝";
     public static final String WHITE_KNIGHT = "♞";
     public static final String WHITE_PAWN = "♟";
+
     private final Random random = new Random();
     private final GamePanel gamePanel;
 
@@ -157,35 +159,33 @@ public class LevelGenerator {
 
     public Level generateMazeLevel() {
         List<Brick> bricks = new ArrayList<>();
+
         int[][] mazePattern = {
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-                {1, 0, 0, 1, 0, 0, 0, 1, 0, 1},
-                {1, 0, 1, 1, 0, 1, 0, 1, 0, 1},
-                {1, 0, 0, 0, 0, 1, 0, 0, 0, 1},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+                {0, 1, 0, 1, 1, 1, 1, 1, 1, 1},
+                {0, 1, 0, 0, 0, 1, 0, 1, 0, 1},
+                {0, 1, 0, 0, 0, 1, 0, 1, 0, 1},
+                {0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+                {0, 1, 1, 1, 1, 1, 1, 1, 1, 1}
         };
 
         for (int row = 0; row < mazePattern.length; row++) {
             for (int col = 0; col < mazePattern[row].length; col++) {
                 if (mazePattern[row][col] == 1) {
-                    int x = col * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
+                    int x = col * (BRICK_WIDTH  + BRICK_HGAP) + BRICK_LEFT_MARGIN;
                     int y = row * (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
 
-                    // Создаем прочные кирпичи для стен лабиринта
-                    Brick brick = new Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, row + 1, 5, "");
+                    // Создаем неразрушимые кирпичи для стен лабиринта
+                    Brick brick = new IndestructibleBrick(x, y, BRICK_WIDTH , BRICK_HEIGHT, row + 1, "WALL");
                     brick.setColor(new Color(70, 70, 70)); // Серый цвет для стен
-
-                    brick.setBonusType(getRandomBonusType(5));
-
                     bricks.add(brick);
                 }
             }
         }
 
         // Добавляем "выход" из лабиринта - особый кирпич
-        int exitX = 8 * (BRICK_WIDTH + BRICK_HGAP) + BRICK_LEFT_MARGIN;
+        int exitX = 8 * (BRICK_WIDTH  + BRICK_HGAP) + BRICK_LEFT_MARGIN;
         int exitY = (BRICK_HEIGHT + BRICK_VGAP) + BRICK_TOP_MARGIN;
-        Brick exitBrick = new Brick(exitX, exitY, BRICK_WIDTH, BRICK_HEIGHT, 2, 1, "EXIT");
+        Brick exitBrick = new Brick(exitX, exitY, BRICK_WIDTH , BRICK_HEIGHT, 2, 1, "EXIT");
         exitBrick.setColor(Color.ORANGE);
         exitBrick.setBonusType(BonusType.EXTRA_LIFE); // Особый бонус за выход
         bricks.add(exitBrick);
@@ -236,17 +236,11 @@ public class LevelGenerator {
 
         if (levelNumber < 3) {
             availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
-        } else if (levelNumber > 3) {
-            if (random.nextDouble() < 0.25) {
-                return BonusType.TRAP_SHRINK_PADDLE;
-            }
-            availableBonuses.remove(BonusType.TRAP_SHRINK_PADDLE);
+            availableBonuses.remove(BonusType.LASER_GUN);
         }
 
-        if (levelNumber >= 6) {
-            if (random.nextDouble() < 0.15) {
-                return BonusType.LASER_GUN;
-            }
+        if (levelNumber < 6){
+            availableBonuses.remove(BonusType.LASER_GUN);
         }
 
         if (availableBonuses.isEmpty()) {
