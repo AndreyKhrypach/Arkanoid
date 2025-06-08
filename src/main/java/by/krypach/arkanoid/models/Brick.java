@@ -7,10 +7,10 @@ import java.awt.*;
 public class Brick {
 
     protected int x, y;
-    private final int width, height;
+    protected final int width, height;
     private final int row;
     protected boolean isDestroyed;
-    private Color color;
+    protected Color color;
     protected int maxHits;
     protected int currentHits;
     private BonusType bonusType;
