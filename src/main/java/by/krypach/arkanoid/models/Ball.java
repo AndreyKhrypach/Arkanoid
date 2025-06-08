@@ -7,7 +7,7 @@ public class Ball {
     public static final double MIN_SPEED = 225.0;
     public static final double SPEED_BOOST = 1.8;
     public static final double BOOST_FADE_TIME = 3.0;
-    public static final int DEFAULT_SIZE = 20;
+    public static final int DEFAULT_SIZE = 15;
 
     private double x, y;
     private double speedX, speedY;

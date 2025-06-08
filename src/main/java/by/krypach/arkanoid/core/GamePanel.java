@@ -75,7 +75,7 @@ public class GamePanel extends JPanel implements KeyListener {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
         setupInput();
-        loadLevel(5);
+        loadLevel(1);
         this.renderSystem = new RenderSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         startGameLoop();
@@ -182,7 +182,7 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     public void checkWinCondition() {
-        if ( levelTransitionInProgress || !isRunning) return;
+        if (levelTransitionInProgress || !isRunning) return;
 
         if (currentLevel.isCompleted() || currentLevel.isLevelCompleted()) {
             showLevelComplete();
@@ -201,9 +201,15 @@ public class GamePanel extends JPanel implements KeyListener {
         new Thread(() -> {
             for (int i = 0; i < 3; i++) {
                 setBackground(Color.CYAN);
-                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                }
                 setBackground(getCurrentLevel().getBackgroundColor());
-                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                }
             }
         }).start();
     }
@@ -231,18 +237,38 @@ public class GamePanel extends JPanel implements KeyListener {
     public void setLives(int lives) {
         this.lives = lives;
     }
-    public Paddle getPaddle() { return paddle; }
-    public List<Ball> getBalls() { return balls; }
-    public List<Brick> getBricks() { return bricks; }
-    public BonusManager getBonusManager() { return bonusManager; }
+
+    public Paddle getPaddle() {
+        return paddle;
+    }
+
+    public List<Ball> getBalls() {
+        return balls;
+    }
+
+    public List<Brick> getBricks() {
+        return bricks;
+    }
+
+    public BonusManager getBonusManager() {
+        return bonusManager;
+    }
 
     public CollisionSystem getCollisionSystem() {
         return collisionSystem;
     }
 
-    public int getCurrentLevelNumber() { return currentLevel.getLevelNumber(); }
-    public int getLives() { return lives; }
-    public int getScore() { return score; }
+    public int getCurrentLevelNumber() {
+        return currentLevel.getLevelNumber();
+    }
+
+    public int getLives() {
+        return lives;
+    }
+
+    public int getScore() {
+        return score;
+    }
 
     public boolean isLifeAnimationActive() {
         return lifeAnimationActive;
@@ -330,7 +356,7 @@ public class GamePanel extends JPanel implements KeyListener {
         paddle.getLaserBeams().clear();
         bossLasers.clear();
 
-        switch(levelNumber) {
+        switch (levelNumber) {
             case 1:
                 this.currentLevel = levelGenerator.generateFirstLevel(5, 10);
                 bonusManager.setCurrentDropChance(0);
@@ -356,6 +382,10 @@ public class GamePanel extends JPanel implements KeyListener {
                 bonusManager.setCurrentDropChance(0.5);
                 break;
             case 7:
+                this.currentLevel = levelGenerator.generatePyramidLevel();
+                bonusManager.setCurrentDropChance(0.7); // Много бонусов
+                break;
+            case 8:
                 this.currentLevel = levelGenerator.generateBossLevel();
                 bonusManager.setCurrentDropChance(0.5);
                 break;
@@ -462,15 +492,15 @@ public class GamePanel extends JPanel implements KeyListener {
                 loadLevel(nextLevel);
 
                 if (nextLevel == 5) {
-                    renderSystem.drawCenteredText(getGraphics(), "Вы нашли выход из лабиринта!", 30, HEIGHT/2 - 30);
+                    renderSystem.drawCenteredText(getGraphics(), "Вы нашли выход из лабиринта!", 30, HEIGHT / 2 - 30);
                 }
             } else {
                 gameComplete();
-                renderSystem.drawCenteredText(getGraphics(), "ПОБЕДА! Финальный счет: " + score, 40, HEIGHT/2);
+                renderSystem.drawCenteredText(getGraphics(), "ПОБЕДА! Финальный счет: " + score, 40, HEIGHT / 2);
             }
             isPaused = false;
             levelTransitionInProgress = false;
-            ((Timer)e.getSource()).stop();
+            ((Timer) e.getSource()).stop();
         });
         showMessageTimer.setRepeats(false);
         showMessageTimer.start();
@@ -495,7 +525,7 @@ public class GamePanel extends JPanel implements KeyListener {
         bonusManager.clear();
         paddle.clearLasers();
 
-        renderSystem.drawCenteredText(getGraphics(), "ИГРА ЗАВЕРШЕНА! Финальный счет: " + score, 30, HEIGHT/2);
+        renderSystem.drawCenteredText(getGraphics(), "ИГРА ЗАВЕРШЕНА! Финальный счет: " + score, 30, HEIGHT / 2);
         repaint();
     }
 
@@ -530,7 +560,8 @@ public class GamePanel extends JPanel implements KeyListener {
                 setBackground(i % 2 == 0 ? Color.RED : Color.BLACK);
                 try {
                     Thread.sleep(150);
-                } catch (InterruptedException ignored) {}
+                } catch (InterruptedException ignored) {
+                }
             }
             setBackground(getCurrentLevel().getBackgroundColor());
         }).start();
