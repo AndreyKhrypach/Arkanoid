@@ -5,6 +5,7 @@ import by.krypach.arkanoid.enums.BonusType;
 import by.krypach.arkanoid.models.BossBrick;
 import by.krypach.arkanoid.models.Brick;
 import by.krypach.arkanoid.models.IndestructibleBrick;
+import by.krypach.arkanoid.models.PyramidBrick;
 
 import java.awt.*;
 import java.util.*;
@@ -16,10 +17,10 @@ public class LevelGenerator {
     public static final int BRICK_TOP_MARGIN = 50;
     public static final int BRICK_LEFT_MARGIN = 10;
     private static final int TARGET_COLS = 10;  // Желаемое количество столбцов
-    private static final int BRICK_HGAP = 3;
-    private static final int BRICK_VGAP = 6;
-    private static final int BRICK_WIDTH = (GamePanel.WIDTH - 2*BRICK_LEFT_MARGIN - (TARGET_COLS-1)*BRICK_HGAP) / TARGET_COLS;
-    private static final int BRICK_HEIGHT =  (int)(BRICK_WIDTH * 0.37);
+    public static final int BRICK_HGAP = 3;
+    public static final int BRICK_VGAP = 6;
+    public static final int BRICK_WIDTH = (GamePanel.WIDTH - 2*BRICK_LEFT_MARGIN - (TARGET_COLS-1)*BRICK_HGAP) / TARGET_COLS;
+    public static final int BRICK_HEIGHT =  (int)(BRICK_WIDTH * 0.37);
     // Черные фигуры (стандартные Unicode)
     public static final String BLACK_KING = "♔";
     public static final String BLACK_QUEEN = "♕";
@@ -162,7 +163,7 @@ public class LevelGenerator {
 
         int[][] mazePattern = {
                 {0, 1, 0, 1, 1, 1, 1, 1, 1, 1},
-                {0, 1, 0, 0, 0, 1, 0, 1, 0, 1},
+                {0, 1, 0, 0, 0, 1, 0, 0, 0, 1},
                 {0, 1, 0, 0, 0, 1, 0, 1, 0, 1},
                 {0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
                 {0, 1, 1, 1, 1, 1, 1, 1, 1, 1}
@@ -193,6 +194,39 @@ public class LevelGenerator {
         return new Level(5, bricks, true, new Color(20, 20, 40)); // Темно-синий фон
     }
 
+    public Level generatePyramidLevel() {
+        List<Brick> bricks = new ArrayList<>();
+        int rows = 5;
+        int centerX = WIDTH / 2;
+        int verticalGap = BRICK_HEIGHT * 3; // Увеличиваем вертикальный зазор между слоями
+
+        // Создаем начальный защитный слой под первым активным слоем (слой 5)
+        createIndestructibleLayer(bricks, rows - 1, centerX, BRICK_TOP_MARGIN + BRICK_HEIGHT + BRICK_VGAP);
+
+        for (int row = 0; row < rows; row++) {
+            int bricksInRow = row + 1;
+            int totalWidth = bricksInRow * BRICK_WIDTH;
+            int startX = centerX - totalWidth / 2;
+            int layer = rows - row; // Теперь нижний слой = 1, верхний = 5
+            int y = BRICK_TOP_MARGIN + row * verticalGap; // Используем увеличенный зазор
+
+            for (int col = 0; col < bricksInRow; col++) {
+                int x = startX + col * BRICK_WIDTH;
+
+                PyramidBrick brick = new PyramidBrick(x, y, BRICK_WIDTH, BRICK_HEIGHT,
+                        row + 1, layer, "", layer);
+
+                // Только верхний слой (5) активен изначально
+                if (layer == 5) {
+                    brick.activate(layer);
+                }
+
+                bricks.add(brick);
+            }
+        }
+        return new Level(7, bricks, true, new Color(30, 30, 50));
+    }
+
     public Level generateBossLevel() {
         List<Brick> bricks = new ArrayList<>();
 
@@ -216,7 +250,7 @@ public class LevelGenerator {
             bricks.add(brick);
         }
 
-        return new Level(7, bricks, true, new Color(30, 0, 0)); // Темно-красный фон
+        return new Level(8, bricks, true, new Color(30, 0, 0)); // Темно-красный фон
     }
 
     // Возвращает цвет по количеству ударов (как в текущей системе)
@@ -259,5 +293,20 @@ public class LevelGenerator {
             case BLACK_KING, WHITE_KING -> 5;
             default -> random.nextInt(2) + 4;
         };
+    }
+
+    private void createIndestructibleLayer(List<Brick> bricks, int row, int centerX, int startY) {
+        int bricksInRow = row + 1;
+        int totalWidth = bricksInRow * BRICK_WIDTH;
+        int startX = centerX - totalWidth / 2;
+
+        for (int col = 0; col < bricksInRow; col++) {
+            int x = startX + col * BRICK_WIDTH;
+
+            IndestructibleBrick brick = new IndestructibleBrick(x, startY, BRICK_WIDTH, BRICK_HEIGHT,
+                    row + 1, "SHIELD");
+            brick.setColor(new Color(100, 100, 100)); // Темно-серый цвет
+            bricks.add(brick);
+        }
     }
 }
